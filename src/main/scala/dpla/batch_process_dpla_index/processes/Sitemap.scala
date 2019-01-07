@@ -15,7 +15,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter {
     val s3write: Boolean = outpath.startsWith("s3")
 
     val timestamp = LocalDateTime.now().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT)
-    val maxRows: Int = 10000
+    val maxRows: Int = 50000
 
     val docs = spark.read.parquet(inpath)
 
@@ -29,7 +29,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter {
       val subfileName = timestamp + "/all_item_urls_" + seq + ".xml"
       val subfile = buildSubfile(timestamp, ids)
 
-      if (s3write) writeS3(outpath, subfileName, subfile)
+      if (s3write) writeS3Gzip(outpath, subfileName, subfile)
       else writeLocal(outpath, subfileName, subfile)
 
       subfileName
