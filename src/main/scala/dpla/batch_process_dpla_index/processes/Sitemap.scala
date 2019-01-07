@@ -26,7 +26,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter {
     val id_count = ids.count
 
     val subfiles: Iterator[String] = ids.toLocalIterator.grouped(maxRows).zipWithIndex.map { case (ids, seq) => {
-      val subfileName = "all_item_urls_" + seq + ".xml"
+      val subfileName = timestamp + "/all_item_urls_" + seq + ".xml"
       val subfile = buildSubfile(timestamp, ids)
 
       if (s3write) writeS3Gzip(outpath, subfileName, subfile)

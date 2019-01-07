@@ -11,9 +11,8 @@ object SitemapEntry {
     val inpath = args(0)
     val outpath = args(1)
 
-    val sitemapUrlPrefix: String =
-      if (args(0).startsWith("s3")) "s3://" // TODO: What is the correct baseUrl for s3?
-      else args.lift(1).getOrElse(throw new RuntimeException("Missing sitemap URL prefix.")).stripSuffix("/") + "/"
+    // sitemapUrlPrefix should have trailing slash
+    val sitemapUrlPrefix: String = args(2).stripSuffix("/") + "/"
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Sitemap")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
