@@ -11,6 +11,7 @@ trait S3FileWriter {
 
   def writeS3(outpath: String, key: String, text: String): String = {
 
+    // bucket should have neither protocol nor trailing slash
     val bucket = outpath.split("://")(1).stripSuffix("/")
 
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
