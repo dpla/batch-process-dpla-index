@@ -30,8 +30,6 @@ object DumpIndex extends LocalFileWriter with S3FileWriter with ManifestWriter {
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)
 
-    spark.read.format("dpla.datasource").load.write.parquet(outpath)
-
     // return output path
     outDir
   }
