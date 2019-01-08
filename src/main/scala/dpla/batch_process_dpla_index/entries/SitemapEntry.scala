@@ -10,9 +10,7 @@ object SitemapEntry {
 
     val inpath = args(0)
     val outpath = args(1)
-
-    // sitemapUrlPrefix should have trailing slash
-    val sitemapUrlPrefix: String = args(2).stripSuffix("/") + "/"
+    val sitemapUrlPrefix = args(2)
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Sitemap")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()

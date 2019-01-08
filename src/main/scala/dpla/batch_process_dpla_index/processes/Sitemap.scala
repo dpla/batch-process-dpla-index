@@ -32,7 +32,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
       val subfileName = timestamp + "/all_item_urls_" + seq + ".xml"
       val subfile = buildSubfile(dateTime, ids)
 
-      if (s3write) writeS3Gzip(outpath, subfileName, subfile)
+      if (s3write) writeS3Gzip(outpath, subfileName + ".gz", subfile)
       else writeLocal(outpath, subfileName, subfile)
 
       subfileName
@@ -43,7 +43,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
     if (s3write) writeS3(outpath, "all_item_urls.xml", siteMap)
     else writeLocal(outpath, "all_item_urls.xml", siteMap)
 
-    val opts = Map("Source" -> inpath, "Sitemap URL prefix" -> sitemapUrlPrefix, "Record count" -> id_count.toString)
+    val opts = Map("Source" -> inpath, "Sitemap URL prefix" -> sitemapUrlPrefix, "URL count" -> id_count.toString)
     val manifest = buildManifest(opts, dateTime)
 
     if (s3write) writeS3(outpath, "_MANIFEST", manifest)
@@ -79,7 +79,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
     val timestamp = dateTime.format(DateTimeFormatter.ISO_INSTANT)
 
     val sitemapElements = subfiles.map( subfile => {
-      val url: String = baseUrl + subfile
+      val url: String = baseUrl.stripSuffix("/") + "/" + subfile
       <sitemap><loc>{url}</loc><lastmod>{timestamp}</lastmod></sitemap>
     })
 

@@ -22,10 +22,9 @@ trait S3FileWriter {
     s"$bucket/$key"
   }
 
-  def writeS3Gzip(outpath: String, name: String, text: String): String = {
+  def writeS3Gzip(outpath: String, key: String, text: String): String = {
 
     val bucket = outpath.split("://")(1).stripSuffix("/")
-    val key = name + ".gz"
 
     // compress
     val outStream = new ByteArrayOutputStream
