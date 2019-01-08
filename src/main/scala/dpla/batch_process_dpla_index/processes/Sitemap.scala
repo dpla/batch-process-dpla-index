@@ -16,24 +16,28 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val s3write: Boolean = outpath.startsWith("s3")
 
-    val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val maxRows: Int = 50000
+
+    val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
+    val isoTimestamp = dateTime.format(DateTimeFormatter.ISO_INSTANT)
+    val dirTimestamp = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
     val docs: DataFrame = spark.read.parquet(inpath)
 
     val ids: RDD[String] = docs.select("doc.id").rdd.map{ row => row.getString(0) }
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    // force evaluation to pull RDD into memory
+    // Force evaluation to pull RDD into memory
     val id_count: Long = ids.count
+
+    // Subfiles
 
     val subfiles: Iterator[String] = ids.toLocalIterator.grouped(maxRows).zipWithIndex.map { case (ids, seq) => {
 
-      val timestamp: String = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-      val subfileBase = timestamp + "/all_item_urls_" + seq + ".xml"
+      val subfileBase = dirTimestamp + "/all_item_urls_" + seq + ".xml"
       val subfileName = if (s3write) subfileBase + ".gz" else subfileBase
 
-      val subfile: String = buildSubfile(dateTime, ids)
+      val subfile: String = buildSubfile(isoTimestamp, ids)
 
       if (s3write) writeS3Gzip(outpath, subfileName, subfile)
       else writeLocal(outpath, subfileName, subfile)
@@ -41,25 +45,32 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
       subfileName
     }}
 
-    val siteMap: String = buildIndex(sitemapUrlPrefix, subfiles, dateTime)
+    // Sitemap index
+
+    val siteMap: String = buildIndex(sitemapUrlPrefix, subfiles, isoTimestamp)
 
     if (s3write) writeS3(outpath, "all_item_urls.xml", siteMap)
     else writeLocal(outpath, "all_item_urls.xml", siteMap)
 
-    val opts: Map[String, String] =
-      Map("Source" -> inpath, "Sitemap URL prefix" -> sitemapUrlPrefix, "URL count" -> id_count.toString)
+    // Manifest
+
+    val opts: Map[String, String] = Map(
+      "Source" -> inpath,
+      "Subfile directory" -> dirTimestamp,
+      "Sitemap URL prefix" -> sitemapUrlPrefix,
+      "Total URL count" -> id_count.toString,
+      "URLs per subfile" -> maxRows.toString)
+
     val manifest: String = buildManifest(opts, dateTime)
 
     if (s3write) writeS3(outpath, "_MANIFEST", manifest)
     else writeLocal(outpath, "_MANIFEST", manifest)
 
-    // return output path
+    // Return output path
     outpath
   }
 
-  def buildSubfile(dateTime: ZonedDateTime, ids: Iterable[String]): String = {
-
-    val timestamp: String = dateTime.format(DateTimeFormatter.ISO_INSTANT)
+  def buildSubfile(timestamp: String, ids: Iterable[String]): String = {
 
     val urls: Iterable[Elem] = ids.map(
       id => {
@@ -78,9 +89,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
     xml.buildString(true)
   }
 
-  def buildIndex(baseUrl: String, subfiles: Iterator[String], dateTime: ZonedDateTime): String  = {
-
-    val timestamp: String = dateTime.format(DateTimeFormatter.ISO_INSTANT)
+  def buildIndex(baseUrl: String, subfiles: Iterator[String], timestamp: String): String  = {
 
     val sitemapElements: Iterator[Elem] = subfiles.map( subfile => {
       val url: String = baseUrl.stripSuffix("/") + "/" + subfile
