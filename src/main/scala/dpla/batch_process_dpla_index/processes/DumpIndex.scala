@@ -20,7 +20,7 @@ object DumpIndex extends LocalFileWriter with S3FileWriter with ManifestWriter {
 
     val count: Long = dump.count
 
-    val outDir: String = outpath + "/" + dirTimestamp + ".parquet"
+    val outDir: String = outpath + "/" + dirTimestamp + "-DplaIndexDump.parquet"
     dump.write.parquet(outDir)
 
     val opts: Map[String, String] = Map("Record count" -> count.toString)
