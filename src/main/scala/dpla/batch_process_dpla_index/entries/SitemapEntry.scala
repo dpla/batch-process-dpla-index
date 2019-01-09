@@ -15,7 +15,7 @@ object SitemapEntry {
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Sitemap")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    Sitemap.execute(spark: SparkSession, inpath, outpath, sitemapUrlPrefix)
+    Sitemap.execute(spark, inpath, outpath, sitemapUrlPrefix)
 
     spark.stop()
   }
