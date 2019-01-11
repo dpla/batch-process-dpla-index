@@ -14,8 +14,7 @@ import scala.util.parsing.json._
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
-  // TODO: Change me
-  val maxRows: Int = 40
+  val maxRows: Int = 10000000
 
   def execute(spark: SparkSession, outpath: String, query: String): String = {
 
@@ -46,7 +45,6 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     }
 
     // Pull docs into memory the first time its evaluated.
-    // TODO: persist here or somewhere else?
     docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val allJsonStrings = docs.map(_._2)
