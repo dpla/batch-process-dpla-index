@@ -7,7 +7,7 @@ import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
-object DumpIndex extends LocalFileWriter with S3FileWriter with ManifestWriter {
+object ParquetDump extends LocalFileWriter with S3FileWriter with ManifestWriter {
 
   def execute(spark: SparkSession, outpath: String, query: String): String = {
 
