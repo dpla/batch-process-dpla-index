@@ -29,7 +29,7 @@ class DplaDataRelation (queryParams: Option[String] = None)
       "spark.es.nodes" -> "search-prod1-es6.internal.dp.la",
       "spark.es.mapping.date.rich" -> "false",
       "spark.es.resource" -> "dpla_alias/item",
-      "spark.es.query" -> "?q=hamster"
+      "spark.es.query" -> ""
     )
 
     val rdd: RDD[(String, Map[String, AnyRef])] =

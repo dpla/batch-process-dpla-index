@@ -23,7 +23,9 @@ object DumpIndex extends LocalFileWriter with S3FileWriter with ManifestWriter {
     val outDir: String = outpath + "/" + dirTimestamp + "-DplaIndexDump.parquet"
     dump.write.parquet(outDir)
 
-    val opts: Map[String, String] = Map("Record count" -> count.toString)
+    val opts: Map[String, String] = Map(
+      "Record count" -> count.toString,
+      "Data source" -> "DPLA ElasticSearch Index")
 
     val manifest: String = buildManifest(opts, dateTime)
 

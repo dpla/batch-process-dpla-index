@@ -9,7 +9,7 @@ trait ManifestWriter {
     val date: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
     // Add date/time to given `opts'
-    val data: Map[String, String] = opts + ("Start date/time" -> date)
+    val data: Map[String, String] = opts + ("Start date/time of file generation" -> date)
 
     data.map{ case(k, v) => s"$k: $v" }.mkString("\n")
   }

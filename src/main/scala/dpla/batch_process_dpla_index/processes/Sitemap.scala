@@ -59,7 +59,7 @@ object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
       "Subfile directory" -> dirTimestamp,
       "Sitemap URL prefix" -> sitemapUrlPrefix,
       "Total URL count" -> id_count.toString,
-      "URLs per subfile" -> maxRows.toString)
+      "Max URLs per subfile" -> maxRows.toString)
 
     val manifest: String = buildManifest(opts, dateTime)
 
