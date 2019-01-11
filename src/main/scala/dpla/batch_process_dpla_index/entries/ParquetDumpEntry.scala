@@ -9,7 +9,7 @@ object ParquetDumpEntry {
   def main(args: Array[String]): Unit = {
 
     val outpath = args(0)
-    val query = args.lift(1).getOrElse("")
+    val query = args.lift(1).getOrElse("")  // e.g. "?q=hamster"
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Parquet Dump")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
