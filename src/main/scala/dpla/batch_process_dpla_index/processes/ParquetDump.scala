@@ -16,7 +16,7 @@ object ParquetDump extends LocalFileWriter with S3FileWriter with ManifestWriter
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val dirTimestamp: String = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
-    val dump: DataFrame = spark.read.format("dpla.datasource").option("queryParam", query)
+    val dump: DataFrame = spark.read.format("dpla.datasource").option("query", query)
       .load.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val count: Long = dump.count
