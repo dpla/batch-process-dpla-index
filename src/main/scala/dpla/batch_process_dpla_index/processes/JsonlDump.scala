@@ -14,7 +14,7 @@ import scala.util.parsing.json._
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
-  val maxRows: Int = 10000000
+  val maxRows: Int = 1000000
 
   def execute(spark: SparkSession, outpath: String, query: String): String = {
 
@@ -72,7 +72,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
 
     data
-      .coalesce(numPartitions)
+      .repartition(numPartitions) // TODO: use coalesce instead?
       .saveAsTextFile(outDir, classOf[GzipCodec])
 
     val opts: Map[String, String] = Map(
