@@ -9,14 +9,15 @@ import org.apache.spark.storage.StorageLevel
 
 object DumpIndex extends LocalFileWriter with S3FileWriter with ManifestWriter {
 
-  def execute(spark: SparkSession, outpath: String): String = {
+  def execute(spark: SparkSession, outpath: String, query: String): String = {
 
     val s3write: Boolean = outpath.startsWith("s3")
 
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val dirTimestamp: String = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
-    val dump: DataFrame = spark.read.format("dpla.datasource").load.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val dump: DataFrame = spark.read.format("dpla.datasource").option("queryParam", query)
+      .load.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val count: Long = dump.count
 

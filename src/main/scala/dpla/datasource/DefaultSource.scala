@@ -8,8 +8,8 @@ class DefaultSource extends RelationProvider {
   override def createRelation(sqlContext: SQLContext,
                               parameters: Map[String, String]) : DplaDataRelation = {
 
-    val queryParams: Option[String] = parameters.get("queryParams")
+    val query: String = parameters.getOrElse("query", "")
 
-    new DplaDataRelation(queryParams)(sqlContext)
+    new DplaDataRelation(query)(sqlContext)
   }
 }

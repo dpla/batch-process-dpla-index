@@ -9,7 +9,7 @@ import org.elasticsearch.spark._
 import scala.collection.mutable.LinkedHashMap
 import scala.collection.Map
 
-class DplaDataRelation (queryParams: Option[String] = None)
+class DplaDataRelation (query: String)
                   (@transient val sqlContext: SQLContext)
   extends BaseRelation with TableScan with Serializable {
 
@@ -29,7 +29,7 @@ class DplaDataRelation (queryParams: Option[String] = None)
       "spark.es.nodes" -> "search-prod1-es6.internal.dp.la",
       "spark.es.mapping.date.rich" -> "false",
       "spark.es.resource" -> "dpla_alias/item",
-      "spark.es.query" -> ""
+      "spark.es.query" -> query
     )
 
     val rdd: RDD[(String, Map[String, AnyRef])] =
