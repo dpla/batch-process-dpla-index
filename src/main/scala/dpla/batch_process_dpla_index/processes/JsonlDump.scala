@@ -14,12 +14,10 @@ import scala.util.parsing.json._
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
+  // TODO: Change me
+  val maxRows: Int = 40
+
   def execute(spark: SparkSession, outpath: String, query: String): String = {
-
-    // TODO: Changeme
-    val maxRows: Int = 40
-
-    val s3write: Boolean = outpath.startsWith("s3")
 
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val year: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy"))
@@ -37,25 +35,13 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val docStrings: RDD[String] = jsonRdd.map{ case(_, doc) => doc }
 
+    // Pull docStrings into memory the first time its evaluated.
+    // TODO: persist here or somewhere else?
     docStrings.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    val count: Long = docStrings.count
+    val allOutDir = outDir("all", outDirBase)
+    exportData(docStrings, allOutDir, dateTime)
 
-    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
-
-    val outDir = outDirBase + "/all.jsonl"
-
-    docStrings.repartition(numPartitions).saveAsTextFile(outDir, classOf[GzipCodec])
-
-    val opts: Map[String, String] = Map(
-      "Record count" -> count.toString,
-      "Max records per file" -> maxRows.toString,
-      "Data source" -> "DPLA ElasticSearch Index")
-
-    val manifest: String = buildManifest(opts, dateTime)
-
-    if (s3write) writeS3(outDir, "_MANIFEST", manifest)
-    else writeLocal(outDir, "_MANIFEST", manifest)
 
     // Get a list of distinct provider names
 //    val providers: List[String] = docStrings.flatMap(d =>
@@ -69,8 +55,31 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 //    ).distinct.collect.toList
 
     // return output path
-    outpath
+    outDirBase
   }
 
+  def outDir(label: String, outDirBase: String): String = outDirBase + "/" + label + ".jsonl"
 
+  def exportData(data: RDD[String], outDir: String, dateTime: ZonedDateTime): Unit = {
+
+    val s3write: Boolean = outDir.startsWith("s3")
+
+    val count: Long = data.count
+
+    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
+
+    data
+      .repartition(numPartitions)
+      .saveAsTextFile(outDir, classOf[GzipCodec])
+
+    val opts: Map[String, String] = Map(
+      "Record count" -> count.toString,
+      "Max records per file" -> maxRows.toString,
+      "Data source" -> "DPLA ElasticSearch Index")
+
+    val manifest: String = buildManifest(opts, dateTime)
+
+    if (s3write) writeS3(outDir, "_MANIFEST", manifest)
+    else writeLocal(outDir, "_MANIFEST", manifest)
+  }
 }
