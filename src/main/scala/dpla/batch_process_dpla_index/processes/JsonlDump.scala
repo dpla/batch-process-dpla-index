@@ -33,14 +33,33 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
 
-    val docStrings: RDD[String] = jsonRdd.map{ case(_, doc) => doc }
+    val allDocs: RDD[String] = jsonRdd.map{ case(_, doc) => doc }
 
     // Pull docStrings into memory the first time its evaluated.
     // TODO: persist here or somewhere else?
-    docStrings.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    allDocs.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    val allOutDir = outDir("all", outDirBase)
-    exportData(docStrings, allOutDir, dateTime)
+    export(allDocs, s"$outDirBase/all.jsonl", dateTime)
+
+    // Get the provider for each doc
+    // Resulting tuples are in the form (provider_name, doc)
+    val providerStrings: RDD[(String, String)] = allDocs.flatMap(d =>
+      JSON.parseFull(d).flatMap(
+        _.asInstanceOf[Map[String, Any]].get("provider").flatMap(
+          _.asInstanceOf[Map[String,Any]].get("name").map(
+            x => (x.asInstanceOf[String], d)
+          )
+        )
+      )
+    )
+
+    val providers: Array[String] = providerStrings.keys.distinct.collect
+
+    providers.foreach(p => {
+      val docs = providerStrings.filter(_._1 == p).map(_._2)
+      val label = p.replace(" ", "_")
+      export(docs, s"$outDirBase/$label.jsonl", dateTime)
+    })
 
 
     // Get a list of distinct provider names
@@ -60,7 +79,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
   def outDir(label: String, outDirBase: String): String = outDirBase + "/" + label + ".jsonl"
 
-  def exportData(data: RDD[String], outDir: String, dateTime: ZonedDateTime): Unit = {
+  def export(data: RDD[String], outDir: String, dateTime: ZonedDateTime): Unit = {
 
     val s3write: Boolean = outDir.startsWith("s3")
 
@@ -69,7 +88,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
 
     data
-      .repartition(numPartitions)
+      .coalesce(numPartitions)
       .saveAsTextFile(outDir, classOf[GzipCodec])
 
     val opts: Map[String, String] = Map(
