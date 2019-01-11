@@ -33,47 +33,33 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
 
-    val allDocs: RDD[String] = jsonRdd.map{ case(_, doc) => doc }
-
-    // Pull docStrings into memory the first time its evaluated.
-    // TODO: persist here or somewhere else?
-    allDocs.persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    export(allDocs, s"$outDirBase/all.jsonl", dateTime)
-
     // Get the provider for each doc
     // Resulting tuples are in the form (provider_name, doc)
-    val providerStrings: RDD[(String, String)] = allDocs.flatMap(d =>
-      JSON.parseFull(d).flatMap(
+    val docs: RDD[(String, String)] = jsonRdd.flatMap{ case(_, doc) =>
+      JSON.parseFull(doc).flatMap(
         _.asInstanceOf[Map[String, Any]].get("provider").flatMap(
           _.asInstanceOf[Map[String,Any]].get("name").map(
-            x => (x.asInstanceOf[String], d)
+            x => (x.asInstanceOf[String], doc)
           )
         )
       )
-    )
+    }
 
-    val providers: Array[String] = providerStrings.keys.distinct.collect
+    // Pull docs into memory the first time its evaluated.
+    // TODO: persist here or somewhere else?
+    docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    val allJsonStrings = docs.map(_._2)
+    export(allJsonStrings, s"$outDirBase/all.jsonl", dateTime)
+
+    val providers: Array[String] = docs.keys.distinct.collect
 
     providers.foreach(p => {
-      val docs = providerStrings.filter(_._1 == p).map(_._2)
+      val jsonStrings = docs.filter(_._1 == p).map(_._2)
       val label = p.replace(" ", "_")
-      export(docs, s"$outDirBase/$label.jsonl", dateTime)
+      export(jsonStrings, s"$outDirBase/$label.jsonl", dateTime)
     })
 
-
-    // Get a list of distinct provider names
-//    val providers: List[String] = docStrings.flatMap(d =>
-//      JSON.parseFull(d).flatMap(
-//        _.asInstanceOf[Map[String, Any]].get("provider").flatMap(
-//          _.asInstanceOf[Map[String,Any]].get("name").map(
-//            _.asInstanceOf[String]
-//          )
-//        )
-//      )
-//    ).distinct.collect.toList
-
-    // return output path
     outDirBase
   }
 
