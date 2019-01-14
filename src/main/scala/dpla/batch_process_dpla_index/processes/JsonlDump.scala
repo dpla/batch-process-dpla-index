@@ -34,14 +34,27 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     // Get the provider for each doc
     // Resulting tuples are in the form (provider_name, doc)
-    val docs: RDD[(String, String)] = jsonRdd.flatMap{ case(_, doc) =>
-      JSON.parseFull(doc).flatMap(
-        _.asInstanceOf[Map[String, Any]].get("provider").flatMap(
-          _.asInstanceOf[Map[String,Any]].get("name").map(
-            x => (x.asInstanceOf[String], doc)
-          )
-        )
-      )
+    // TODO: Try parsing as string instead of JSON?
+    // TODO: separate query for each provider?
+    // TODO: confirm that we can't do a query to just get providers facet
+//    val docs: RDD[(String, String)] = jsonRdd.flatMap{ case(_, doc) =>
+//      JSON.parseFull(doc).flatMap(
+//        _.asInstanceOf[Map[String, Any]].get("provider").flatMap(
+//          _.asInstanceOf[Map[String,Any]].get("name").map(
+//            x => (x.asInstanceOf[String], doc)
+//          )
+//        )
+//      )
+//    }
+
+    val docs: RDD[(String, String)] = jsonRdd.flatMap { case(_, doc) =>
+      // match pattern "provider":{"[...]}"
+      val providerSubstring = "\"provider\":\\{[^}]*\\}".r.findFirstIn(doc)
+      // match pattern "name":"[...]"
+      "(\"name\":\")([^\"]*)".r.findFirstMatchIn(providerSubstring.getOrElse("")) match {
+        case Some(m) => Some((m.group(2), doc))
+        case None => None
+      }
     }
 
     // Pull docs into memory the first time its evaluated.
