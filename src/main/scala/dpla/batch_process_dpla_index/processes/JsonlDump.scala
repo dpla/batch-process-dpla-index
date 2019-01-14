@@ -10,12 +10,9 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.elasticsearch.spark._
 
-import scala.util.parsing.json._
-
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
-  // TODO: 8 mil?
-  val maxRows: Int = 1000000
+  val maxRows: Int = 5000000
 
   def execute(spark: SparkSession, outpath: String, query: String): String = {
 
@@ -32,21 +29,6 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     )
 
     val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
-
-    // Get the provider for each doc
-    // Resulting tuples are in the form (provider_name, doc)
-    // TODO: Try parsing as string instead of JSON?
-    // TODO: separate query for each provider?
-    // TODO: confirm that we can't do a query to just get providers facet
-//    val docs: RDD[(String, String)] = jsonRdd.flatMap{ case(_, doc) =>
-//      JSON.parseFull(doc).flatMap(
-//        _.asInstanceOf[Map[String, Any]].get("provider").flatMap(
-//          _.asInstanceOf[Map[String,Any]].get("name").map(
-//            x => (x.asInstanceOf[String], doc)
-//          )
-//        )
-//      )
-//    }
 
     val docs: RDD[(String, String)] = jsonRdd.flatMap { case(_, doc) =>
       // match pattern "provider":{"[...]}"
@@ -85,8 +67,9 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
 
+    // use repartition, coalesce is too slow
     data
-      .coalesce(numPartitions) // TODO: use coalesce instead?
+      .repartition(numPartitions)
       .saveAsTextFile(outDir, classOf[GzipCodec])
 
     val opts: Map[String, String] = Map(
