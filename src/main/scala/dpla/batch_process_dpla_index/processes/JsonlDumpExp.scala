@@ -12,6 +12,7 @@ import org.elasticsearch.spark._
 import org.json4s.jackson.JsonMethods
 import org.json4s.JsonDSL._
 import org.json4s.JValue
+import org.json4s.jackson.JsonMethods._
 
 import scala.util.matching.Regex
 
@@ -27,34 +28,35 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     val month: String = dateTime.format(DateTimeFormatter.ofPattern("MM"))
     val outDirBase: String = outpath.stripSuffix("/") + "/" + year + "/" + month
 
-    val configs = Map(
-      "spark.es.nodes" -> "search-prod1-es6.internal.dp.la",
-      "spark.es.mapping.date.rich" -> "false",
-      "spark.es.resource" -> "dpla_alias/item",
-      "spark.es.query" -> query
-    )
+    val keys = getS3Keys(s3client.listObjects("dpla-master-dataset")).toList
+      .filter(_.contains("IndexRecord.jsonl"))
 
-    val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
-
-    jsonRdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    // Use string pattern matching to get provider names b/c parsing JSON is much too expensive.
-    val docs: RDD[(String, String)] = jsonRdd.map { x =>
-      val doc = x._2
-      // match pattern "provider":{"[...]}"
-      val providerSubstring = "\"provider\":\\{[^}]*\\}".r.findFirstIn(doc)
-      // match pattern "name":"[...]"
-      "(\"name\":\")([^\"]*)".r.findFirstMatchIn(providerSubstring.getOrElse("")) match {
-        case Some(m) => (m.group(2), doc)
-        case None => ("MISSING", doc)
-      }
-    }
-
-    // Pull docs into memory the first time its evaluated.
-//    docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    docs.count
-
-    outpath
+//    val configs = Map(
+//      "spark.es.nodes" -> "search-prod1-es6.internal.dp.la",
+//      "spark.es.mapping.date.rich" -> "false",
+//      "spark.es.resource" -> "dpla_alias/item",
+//      "spark.es.query" -> query
+//    )
+//
+//    val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
+//
+//    jsonRdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
+//
+//    jsonRdd.count
+//
+//    // Use string pattern matching to get provider names b/c parsing JSON is much too expensive.
+//    val docs: RDD[(String, String)] = jsonRdd.map { x =>
+//      val doc = x._2
+//      val j = JsonMethods.parse(doc)
+//      val provider = compact(j \ "provider" \ "name")
+//      (provider, doc)
+//    }
+//
+//    // Pull docs into memory the first time its evaluated.
+////    docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
+//
+//    docs.count
+//
+//    outpath
   }
 }

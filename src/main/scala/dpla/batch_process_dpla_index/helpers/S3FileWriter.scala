@@ -4,7 +4,11 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.zip.GZIPOutputStream
 
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest}
+import com.amazonaws.services.s3.model.{ObjectListing, ObjectMetadata, PutObjectRequest}
+
+import scala.annotation.tailrec
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 
 trait S3FileWriter {
   lazy val s3client: AmazonS3Client = new AmazonS3Client
@@ -42,5 +46,12 @@ trait S3FileWriter {
 
     // Return filepath
     s"$bucket/$key"
+  }
+
+  @tailrec
+  final def getS3Keys(objects: ObjectListing, files: ListBuffer[String] = new ListBuffer[String]): ListBuffer[String] = {
+    files ++= objects.getObjectSummaries.toSeq.map(x => x.getKey)
+    if (!objects.isTruncated) files
+    else getS3Keys(s3client.listNextBatchOfObjects(objects), files)
   }
 }
