@@ -8,18 +8,14 @@ import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
-import org.elasticsearch.spark._
 import org.json4s.jackson.JsonMethods
-import org.json4s.JsonDSL._
-import org.json4s.JValue
-import org.json4s.jackson.JsonMethods._
-
-import scala.util.matching.Regex
 
 object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
   // 5 mil is too high
-  //  val maxRows: Int = 1000000
+  //  val maxRows: Int = 1000000\
+
+//  case class providerRecords(provider: String, input: String, records: RDD[String] = RDD(), count: Long = 0)
 
   def execute(spark: SparkSession, outpath: String, query: String): String = {
 
@@ -27,7 +23,6 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     val year: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy"))
     val month: String = dateTime.format(DateTimeFormatter.ofPattern("MM"))
     val outDirBase: String = outpath.stripSuffix("/") + "/" + year + "/" + month
-
     val bucket = "dpla-master-dataset"
 
     val allFiles = getS3Keys(s3client.listObjects(bucket)).toList
@@ -93,7 +88,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     // Export all providers dump
     val allRecords = recordSources.map(x => x._3).reduce(_.union(_))
     val outDir = s"$outDirBase/all.jsonl"
-    val count: Long = recordSources.map(x => x._4).reduce(_+_)
+    val count: Long = recordSources.map(x => x._4).sum
 
     export(allRecords, outDir)
 
@@ -116,6 +111,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
   def export(data: RDD[String], outDir: String): Unit = {
 
     val s3write: Boolean = outDir.startsWith("s3")
+    data.saveAsTextFile(outDir, classOf[GzipCodec])
 
 
     //    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
@@ -124,11 +120,6 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
 //    data
       //      .repartition(numPartitions)
 //      .saveAsTextFile(outDir, classOf[GzipCodec])
-
-    data.saveAsTextFile(outDir, classOf[GzipCodec])
-
-
-
 
   }
 
@@ -140,35 +131,4 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)
   }
-
-
-
-//    val configs = Map(
-//      "spark.es.nodes" -> "search-prod1-es6.internal.dp.la",
-//      "spark.es.mapping.date.rich" -> "false",
-//      "spark.es.resource" -> "dpla_alias/item",
-//      "spark.es.query" -> query
-//    )
-//
-//    val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
-//
-//    jsonRdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
-//
-//    jsonRdd.count
-//
-//    // Use string pattern matching to get provider names b/c parsing JSON is much too expensive.
-//    val docs: RDD[(String, String)] = jsonRdd.map { x =>
-//      val doc = x._2
-//      val j = JsonMethods.parse(doc)
-//      val provider = compact(j \ "provider" \ "name")
-//      (provider, doc)
-//    }
-//
-//    // Pull docs into memory the first time its evaluated.
-////    docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
-//
-//    docs.count
-//
-//    outpath
-//  }
 }
