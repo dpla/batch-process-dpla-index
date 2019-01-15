@@ -9,6 +9,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.elasticsearch.spark._
+import org.json4s.jackson.JsonMethods
+import org.json4s.JsonDSL._
+import org.json4s.JValue
 
 import scala.util.matching.Regex
 
@@ -33,6 +36,8 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
 
     val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
 
+    jsonRdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
+
     // Use string pattern matching to get provider names b/c parsing JSON is much too expensive.
     val docs: RDD[(String, String)] = jsonRdd.map { x =>
       val doc = x._2
@@ -46,7 +51,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     }
 
     // Pull docs into memory the first time its evaluated.
-    docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
+//    docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     docs.count
 
