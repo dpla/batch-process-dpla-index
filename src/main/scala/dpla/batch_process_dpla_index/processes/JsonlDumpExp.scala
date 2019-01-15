@@ -47,12 +47,12 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
 
     import spark.implicits._
 
-    val recordSources: List[(String, RDD[String])] = directories.map(x => {
-      val directory = x._2
+    val recordSources: Iterable[(String, String, RDD[String], Long)] = directories.map(x => {
+      val input = x._2
       val provider = x._1
-      val records: DataFrame = spark.read.text(directory).persist(StorageLevel.MEMORY_AND_DISK_SER)
+      val records: DataFrame = spark.read.text(input)
 
-      val recordSource = records.map(
+      val recordSource: RDD[String] = records.map(
         row => {
           val j = JsonMethods.parse(row.getString(0))
           val source = j \ "_source"
@@ -66,26 +66,57 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
           }
           JsonMethods.compact(cleanSource) // "compact" String rendering
         }
-      ).rdd
+      ).rdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-      (provider, recordSource)
-    }).toList
+      val count = recordSource.count
 
-    recordSources.foreach(x => {
-      val provider = x._1
-      val data = x._2
-      val outDir = s"$outDirBase/$provider.jsonl"
-      export(data, outDir, dateTime)
+      (provider, input, recordSource, count)
     })
 
-    outpath
+    // Export individual provider dumps
+    recordSources.foreach(x => {
+      val provider = x._1
+      val input = x._2
+      val data = x._3
+      val count = x._4
+      val outDir = s"$outDirBase/$provider.jsonl"
+
+      export(data, outDir)
+
+      val manifestOpts: Map[String, String] = Map(
+        "Record count" -> count.toString,
+        //      "Max records per file" -> maxRows.toString,
+        "Data source" -> input)
+      writeManifest(manifestOpts, outDir, dateTime)
+    })
+
+    // Export all providers dump
+    val allRecords = recordSources.map(x => x._3).reduce(_.union(_))
+    val outDir = s"$outDirBase/all.jsonl"
+    val count: Long = recordSources.map(x => x._4).reduce(_+_)
+
+    export(allRecords, outDir)
+
+    val allOpts: Map[String, String] = Map(
+      "Total record count" -> count.toString
+    )
+
+    val providerOpts: Map[String, String] = recordSources.map(x => {
+      val provider = x._1
+      val input = x._2
+      val count = x._4
+      Map(s"$provider date source" -> input, s"$provider record count" -> count.toString)
+    }).reduce(_++_)
+
+    writeManifest(allOpts ++ providerOpts, outDir, dateTime)
+
+    outDir
   }
 
-  def export(data: RDD[String], outDir: String, dateTime: ZonedDateTime): Unit = {
+  def export(data: RDD[String], outDir: String): Unit = {
 
     val s3write: Boolean = outDir.startsWith("s3")
 
-    val count: Long = data.count
 
     //    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
 
@@ -96,10 +127,13 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
 
     data.saveAsTextFile(outDir, classOf[GzipCodec])
 
-    val opts: Map[String, String] = Map(
-      "Record count" -> count.toString,
-      //      "Max records per file" -> maxRows.toString,
-      "Data source" -> "DPLA ElasticSearch Index")
+
+
+
+  }
+
+  def writeManifest(opts: Map[String, String], outDir: String, dateTime: ZonedDateTime) = {
+    val s3write: Boolean = outDir.startsWith("s3")
 
     val manifest: String = buildManifest(opts, dateTime)
 
