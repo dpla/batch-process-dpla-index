@@ -12,7 +12,8 @@ import org.elasticsearch.spark._
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
-  val maxRows: Int = 5000000
+  // 5 mil is too high
+//  val maxRows: Int = 1000000
 
   def execute(spark: SparkSession, outpath: String, query: String): String = {
 
@@ -30,6 +31,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
 
+    // Use string pattern matching to get provider names b/c parsing JSON is much too expensive.
     val docs: RDD[(String, String)] = jsonRdd.flatMap { case(_, doc) =>
       // match pattern "provider":{"[...]}"
       val providerSubstring = "\"provider\":\\{[^}]*\\}".r.findFirstIn(doc)
@@ -65,16 +67,16 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val count: Long = data.count
 
-    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
+//    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
 
     // use repartition, coalesce is too slow
     data
-      .repartition(numPartitions)
+//      .repartition(numPartitions)
       .saveAsTextFile(outDir, classOf[GzipCodec])
 
     val opts: Map[String, String] = Map(
       "Record count" -> count.toString,
-      "Max records per file" -> maxRows.toString,
+//      "Max records per file" -> maxRows.toString,
       "Data source" -> "DPLA ElasticSearch Index")
 
     val manifest: String = buildManifest(opts, dateTime)
