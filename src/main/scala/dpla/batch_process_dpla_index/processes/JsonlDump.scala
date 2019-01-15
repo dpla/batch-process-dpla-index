@@ -10,6 +10,8 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.elasticsearch.spark._
 
+import scala.util.matching.Regex
+
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
   // 5 mil is too high
@@ -32,15 +34,17 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     val jsonRdd: RDD[(String, String)] = spark.sqlContext.sparkContext.esJsonRDD(configs)
 
     // Use string pattern matching to get provider names b/c parsing JSON is much too expensive.
-    val docs: RDD[(String, String)] = jsonRdd.flatMap { case(_, doc) =>
-      // match pattern "provider":{"[...]}"
-      val providerSubstring = "\"provider\":\\{[^}]*\\}".r.findFirstIn(doc)
-      // match pattern "name":"[...]"
-      "(\"name\":\")([^\"]*)".r.findFirstMatchIn(providerSubstring.getOrElse("")) match {
-        case Some(m) => Some((m.group(2), doc))
-        case None => None
-      }
-    }
+//    val docs: RDD[(String, String)] = jsonRdd.flatMap { case(_, doc) =>
+//      // match pattern "provider":{"[...]}"
+//      val providerSubstring = "\"provider\":\\{[^}]*\\}".r.findFirstIn(doc)
+//      // match pattern "name":"[...]"
+//      "(\"name\":\")([^\"]*)".r.findFirstMatchIn(providerSubstring.getOrElse("")) match {
+//        case Some(m) => Some((m.group(2), doc))
+//        case None => None
+//      }
+//    }
+
+    val docs: RDD[(String, String)] = jsonRdd.flatMap { case (_, doc) => docParser.parse(doc) }
 
     // Pull docs into memory the first time its evaluated.
     docs.persist(StorageLevel.MEMORY_AND_DISK_SER)
@@ -83,5 +87,18 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)
+  }
+}
+
+object docParser {
+  val providerRegex: Regex = "\"provider\":\\{[^}]*\\}".r
+  val nameRegex: Regex = "(\"name\":\")([^\"]*)".r
+
+  def parse(doc: String): Option[(String, String)] = {
+    val provider: Option[String] = providerRegex.findFirstIn(doc)
+    nameRegex.findFirstMatchIn(provider.getOrElse("")) match {
+      case Some(m) => Some((m.group(2), doc))
+      case None => None
+    }
   }
 }
