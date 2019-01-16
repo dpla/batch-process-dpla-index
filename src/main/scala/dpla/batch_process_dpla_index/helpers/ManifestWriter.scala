@@ -2,6 +2,7 @@ package dpla.batch_process_dpla_index.helpers
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import scala.collection.immutable.SortedMap
 
 trait ManifestWriter {
 
@@ -11,6 +12,9 @@ trait ManifestWriter {
     // Add date/time to given `opts'
     val data: Map[String, String] = opts + ("Start date/time of file generation" -> date)
 
-    data.map{ case(k, v) => s"$k: $v" }.mkString("\n")
+    // Sort by key for legibility
+    val sorted = SortedMap[String, String]() ++ data
+
+    sorted.map{ case(k, v) => s"$k: $v" }.mkString("\n")
   }
 }
