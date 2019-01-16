@@ -8,7 +8,10 @@ import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
+import org.json4s
+import org.json4s._
 import org.json4s.jackson.JsonMethods
+import org.json4s.jackson.JsonMethods._
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
@@ -51,7 +54,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
       val records: DataFrame = spark.read.text(input)
 
       val recordSource: RDD[String] = records
-        .map(row => cleanJson(row.getString(0)))
+        .flatMap(row => cleanJson(row.getString(0)))
         .rdd
         .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
@@ -95,26 +98,35 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
   }
 
   // Clean up a JSON String by removing unwanted fields.
-  def cleanJson(jsonString: String): String = {
+  // Return only if "_type" == "item"
+  def cleanJson(jsonString: String): Option[String] = {
     val j = JsonMethods.parse(jsonString)
-    val source = j \ "_source"
-    // There are fields in legacy data files that we either don't need in
-    // Ingestion 3, or that are forbidden by Elasticsearch 6:
-    val cleanSource = source.removeField {
-      case ("_id", _) => true
-      case ("_rev", _) => true
-      case ("ingestionSequence", _) => true
-      case _ => false
-    }
-    JsonMethods.compact(cleanSource) // "compact" String rendering
+
+    if (j \ "_type" == new JString("item")) {
+
+      val source = j \ "_source"
+      // There are fields in legacy data files that we either don't need in
+      // Ingestion 3, or that are forbidden by Elasticsearch 6:
+      val cleanSource = source.removeField {
+        case ("_id", _) => true
+        case ("_rev", _) => true
+        case ("ingestionSequence", _) => true
+        case _ => false
+      }
+
+      Some(JsonMethods.compact(cleanSource))
+
+    } else None
   }
+
+  def isItem(jsonString: json4s.JValue): Boolean = jsonString \ "_type" == new JString("item")
 
   def export(data: RDD[String], outDir: String, count: Long): Unit = {
     val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
     data.repartition(numPartitions).saveAsTextFile(outDir, classOf[GzipCodec])
   }
 
-  def writeManifest(opts: Map[String, String], outDir: String, dateTime: ZonedDateTime) = {
+  def writeManifest(opts: Map[String, String], outDir: String, dateTime: ZonedDateTime): Unit = {
     val s3write: Boolean = outDir.startsWith("s3")
 
     val manifest: String = buildManifest(opts, dateTime)
