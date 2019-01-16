@@ -13,7 +13,7 @@ import org.json4s.jackson.JsonMethods
 object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
   // 5 mil is too high
-  //  val maxRows: Int = 1000000\
+  val maxRows: Int = 1000000
 
   case class ProviderRecords(provider: String, input: String, records: RDD[String], count: Long)
 
@@ -27,6 +27,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
 
     val allFiles = getS3Keys(s3client.listObjects(bucket)).toList
 
+    // Get all paths from S3 bucket
     val paths = for {
       file <- allFiles
       sections = file.split("/")
@@ -35,6 +36,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
       if sections(2).endsWith(".jsonl")
     } yield (sections(0), sections(2))
 
+    // Get the path to the most recent jsonl for each provider
     val directories = for {
       group <- paths.groupBy(x => x._1)
       last = group._2.max
@@ -42,26 +44,16 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
 
     import spark.implicits._
 
+    // Read in jsonl, remove unwanted fields, and persist
     val providerRecords: Iterable[ProviderRecords] = directories.map(x => {
       val input = x._2
       val provider = x._1
       val records: DataFrame = spark.read.text(input)
 
-      val recordSource: RDD[String] = records.map(
-        row => {
-          val j = JsonMethods.parse(row.getString(0))
-          val source = j \ "_source"
-          // There are fields in legacy data files that we either don't need in
-          // Ingestion 3, or that are forbidden by Elasticsearch 6:
-          val cleanSource = source.removeField {
-            case ("_id", _) => true
-            case ("_rev", _) => true
-            case ("ingestionSequence", _) => true
-            case _ => false
-          }
-          JsonMethods.compact(cleanSource) // "compact" String rendering
-        }
-      ).rdd.persist(StorageLevel.MEMORY_AND_DISK_SER)
+      val recordSource: RDD[String] = records
+        .map(row => cleanJson(row.getString(0)))
+        .rdd
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
       val count = recordSource.count
 
@@ -72,7 +64,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     providerRecords.foreach(x => {
       val outDir = "outDirBase/" + x.provider + ".jsonl"
 
-      export(x.records, outDir)
+      export(x.records, outDir, x.count)
 
       val manifestOpts: Map[String, String] = Map(
         "Record count" -> x.count.toString,
@@ -86,7 +78,7 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     val outDir = s"$outDirBase/all.jsonl"
     val count: Long = providerRecords.map(x => x.count).sum
 
-    export(allRecords, outDir)
+    export(allRecords, outDir, count)
 
     val allOpts: Map[String, String] = Map(
       "Total record count" -> count.toString
@@ -102,19 +94,24 @@ object JsonlDumpExp extends S3FileWriter with LocalFileWriter with ManifestWrite
     outDir
   }
 
-  def export(data: RDD[String], outDir: String): Unit = {
+  // Clean up a JSON String by removing unwanted fields.
+  def cleanJson(jsonString: String): String = {
+    val j = JsonMethods.parse(jsonString)
+    val source = j \ "_source"
+    // There are fields in legacy data files that we either don't need in
+    // Ingestion 3, or that are forbidden by Elasticsearch 6:
+    val cleanSource = source.removeField {
+      case ("_id", _) => true
+      case ("_rev", _) => true
+      case ("ingestionSequence", _) => true
+      case _ => false
+    }
+    JsonMethods.compact(cleanSource) // "compact" String rendering
+  }
 
-    val s3write: Boolean = outDir.startsWith("s3")
-    data.saveAsTextFile(outDir, classOf[GzipCodec])
-
-
-    //    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
-
-    // use repartition, coalesce is too slow
-//    data
-      //      .repartition(numPartitions)
-//      .saveAsTextFile(outDir, classOf[GzipCodec])
-
+  def export(data: RDD[String], outDir: String, count: Long): Unit = {
+    val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
+    data.repartition(numPartitions).saveAsTextFile(outDir, classOf[GzipCodec])
   }
 
   def writeManifest(opts: Map[String, String], outDir: String, dateTime: ZonedDateTime) = {
