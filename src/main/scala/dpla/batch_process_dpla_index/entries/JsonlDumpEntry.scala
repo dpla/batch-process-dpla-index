@@ -1,6 +1,6 @@
 package dpla.batch_process_dpla_index.entries
 
-import dpla.batch_process_dpla_index.processes.{JsonlDump, JsonlDumpExp}
+import dpla.batch_process_dpla_index.processes.JsonlDump
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
@@ -13,7 +13,7 @@ object JsonlDumpEntry {
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: JSON-L Dump")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    JsonlDumpExp.execute(spark, outpath, query)
+    JsonlDump.execute(spark, outpath, query)
 
     spark.stop()
   }
