@@ -84,7 +84,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val allOpts: Map[String, String] = Map(
       "Total record count" -> count.toString,
-      "Max records per file" -> maxRows.toString,
+      "Max records per file" -> maxRows.toString
     )
 
     val providerOpts: Map[String, String] = providerRecords.map(x => Map(
