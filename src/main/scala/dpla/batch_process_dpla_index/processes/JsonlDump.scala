@@ -53,7 +53,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
       val records: DataFrame = spark.read.text(input)
 
       val recordSource: RDD[String] = records
-        .flatMap(row => cleanJson(row.getString(0)))
+        .map(row => row.getString(0))
         .rdd
         .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
