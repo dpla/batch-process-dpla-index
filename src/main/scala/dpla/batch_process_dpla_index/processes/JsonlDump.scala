@@ -11,12 +11,11 @@ import org.apache.spark.storage.StorageLevel
 import org.json4s
 import org.json4s._
 import org.json4s.jackson.JsonMethods
-import org.json4s.jackson.JsonMethods._
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
   // 5 mil is too high
-  val maxRows: Int = 1000000
+  val maxRows: Int = 2000000
 
   case class ProviderRecords(provider: String, input: String, records: RDD[String], count: Long)
 
@@ -71,7 +70,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
       val manifestOpts: Map[String, String] = Map(
         "Record count" -> x.count.toString,
-        //      "Max records per file" -> maxRows.toString,
+        "Max records per file" -> maxRows.toString,
         "Data source" -> x.input)
       writeManifest(manifestOpts, outDir, dateTime)
     })
@@ -84,7 +83,8 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     export(allRecords, outDir, count)
 
     val allOpts: Map[String, String] = Map(
-      "Total record count" -> count.toString
+      "Total record count" -> count.toString,
+      "Max records per file" -> maxRows.toString,
     )
 
     val providerOpts: Map[String, String] = providerRecords.map(x => Map(
