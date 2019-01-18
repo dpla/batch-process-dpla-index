@@ -3,13 +3,13 @@ package dpla.batch_process_dpla_index.processes
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 
-import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileWriter}
+import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
 import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
-object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
+object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   // Maximum rows per record (approximate).
   // Performance slows at 5 mil records, errors occur at 10 mil.

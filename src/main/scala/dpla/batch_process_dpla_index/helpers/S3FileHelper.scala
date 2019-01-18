@@ -10,7 +10,7 @@ import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
-trait S3FileWriter {
+trait S3FileHelper {
   lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   def writeS3(outpath: String, key: String, text: String): String = {

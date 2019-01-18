@@ -3,14 +3,14 @@ package dpla.batch_process_dpla_index.processes
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 
-import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileWriter}
+import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
 import scala.xml.Elem
 
-object Sitemap extends S3FileWriter with LocalFileWriter with ManifestWriter {
+object Sitemap extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   def execute(spark: SparkSession, inpath: String, outpath: String, sitemapUrlPrefix: String): String = {
 
