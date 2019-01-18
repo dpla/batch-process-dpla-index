@@ -8,14 +8,14 @@ import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
-import org.json4s
-import org.json4s._
-import org.json4s.jackson.JsonMethods
 
 object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
-  // 5 mil is too high
+  // Maximum rows per record (approximate).
+  // Performance slows at 5 mil records, errors occur at 10 mil.
   val maxRows: Int = 2000000
+
+  val inputBucket = "dpla-master-dataset"
 
   case class ProviderRecords(provider: String, input: String, records: RDD[String], count: Long)
 
@@ -25,9 +25,8 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     val year: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy"))
     val month: String = dateTime.format(DateTimeFormatter.ofPattern("MM"))
     val outDirBase: String = outpath.stripSuffix("/") + "/" + year + "/" + month
-    val bucket = "dpla-master-dataset"
 
-    val allFiles = getS3Keys(s3client.listObjects(bucket)).toList
+    val allFiles = getS3Keys(s3client.listObjects(inputBucket)).toList
 
     // Get all paths from S3 bucket
     val paths = for {
@@ -42,7 +41,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
     val directories = for {
       group <- paths.groupBy(x => x._1)
       last = group._2.max
-    } yield (group._1, "s3a://" + bucket + "/" + group._1 + "/jsonl/" + last._2 + "/")
+    } yield (group._1, "s3a://" + inputBucket + "/" + group._1 + "/jsonl/" + last._2 + "/")
 
     import spark.implicits._
 
@@ -57,6 +56,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
         .rdd
         .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+      // Read input into memory
       val count = recordSource.count
 
       ProviderRecords(provider, input, recordSource, count)
@@ -70,7 +70,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
       val manifestOpts: Map[String, String] = Map(
         "Record count" -> x.count.toString,
-        "Max records per file" -> maxRows.toString,
+        "Max records per file (approximate)" -> maxRows.toString,
         "Data source" -> x.input)
       writeManifest(manifestOpts, outDir, dateTime)
     })
@@ -84,7 +84,7 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     val allOpts: Map[String, String] = Map(
       "Total record count" -> count.toString,
-      "Max records per file" -> maxRows.toString
+      "Max records per file (approximate)" -> maxRows.toString
     )
 
     val providerOpts: Map[String, String] = providerRecords.map(x => Map(
@@ -96,30 +96,6 @@ object JsonlDump extends S3FileWriter with LocalFileWriter with ManifestWriter {
 
     outDir
   }
-
-  // Clean up a JSON String by removing unwanted fields.
-  // Return only if "_type" == "item"
-  def cleanJson(jsonString: String): Option[String] = {
-    val j = JsonMethods.parse(jsonString)
-
-    if (j \ "_type" == new JString("item")) {
-
-      val source = j \ "_source"
-      // There are fields in legacy data files that we either don't need in
-      // Ingestion 3, or that are forbidden by Elasticsearch 6:
-      val cleanSource = source.removeField {
-        case ("_id", _) => true
-        case ("_rev", _) => true
-        case ("ingestionSequence", _) => true
-        case _ => false
-      }
-
-      Some(JsonMethods.compact(cleanSource))
-
-    } else None
-  }
-
-  def isItem(jsonString: json4s.JValue): Boolean = jsonString \ "_type" == new JString("item")
 
   def export(data: RDD[String], outDir: String, count: Long): Unit = {
     val numPartitions: Int = (count / maxRows.toFloat).ceil.toInt
