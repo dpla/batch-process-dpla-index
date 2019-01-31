@@ -1,6 +1,5 @@
 package dpla.batch_process_dpla_index.processes
 
-import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
@@ -14,15 +13,13 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
     val s3write: Boolean = outpath.startsWith("s3")
 
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
-    val dirTimestamp: String = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
     val dump: DataFrame = spark.read.format("dpla.datasource").option("query", query)
       .load.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val count: Long = dump.count
 
-    val outDir: String = outpath + "/" + dirTimestamp + "-DplaIndexDump.parquet"
-    dump.write.parquet(outDir)
+    dump.write.parquet(outpath)
 
     val opts: Map[String, String] = Map(
       "Record count" -> count.toString,
@@ -30,10 +27,10 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
 
     val manifest: String = buildManifest(opts, dateTime)
 
-    if (s3write) writeS3(outDir, "_MANIFEST", manifest)
-    else writeLocal(outDir, "_MANIFEST", manifest)
+    if (s3write) writeS3(outpath, "_MANIFEST", manifest)
+    else writeLocal(outpath, "_MANIFEST", manifest)
 
     // return output path
-    outDir
+    outpath
   }
 }
