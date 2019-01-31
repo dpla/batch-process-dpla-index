@@ -5,15 +5,18 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 /**
-  * Main entry point for generating public JSONL dumps of the DPLA index.
-  * The source is the most recent JSONL dump in s3://dpla-master-dataset
-  * This creates dump with all items, along with individual dumps for each providers.
+  * Main entry point for generating compressed JSONL dumps of the DPLA index.
+  * The source is the most recent JSONL dump in s3://dpla-master-dataset.
+  * This creates a dump with all items, along with individual dumps for each providers.
   *
   * Args
-  *   args(0) = outpath   Local or S3 output path to the top-level directory that will contain
-  *                       all.jsonl and the individual provider dumps.
+  *   args(0) = outpath   Local or S3 path to the top-level directory destination.
   *                       Month and year will be added to the auto-generated file paths.
   *                       e.g. s3a://dpla-provider-export/
+  *
+  * A spark-submit invocation requires the following packages:
+  *   com.amazonaws:aws-java-sdk:1.7.4
+  *   org.apache.hadoop:hadoop-aws:2.7.6
   */
 
 object JsonlDumpEntry {

@@ -13,6 +13,11 @@ import org.apache.spark.sql.SparkSession
   *
   *   args(1) = query     Optional parameters for an ElasticSearch query,
   *                       e.g. ?q=hamster
+  *
+  * A spark-submit invocation requires the following packages:
+  *   org.elasticsearch:elasticsearch-spark-20_2.11:6.4.2
+  *   com.amazonaws:aws-java-sdk:1.7.4
+  *   org.apache.hadoop:hadoop-aws:2.7.6
   */
 
 object ParquetDumpEntry {
