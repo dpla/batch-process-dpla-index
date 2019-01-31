@@ -1,5 +1,6 @@
 package dpla.batch_process_dpla_index.processes
 
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}

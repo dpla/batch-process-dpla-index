@@ -5,8 +5,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 /**
-  * Main entry point for generating a full dump of the DPLA ElasticSearch index
-  * in parquet.
+  * Main entry point for generating a parquet dump of the DPLA ElasticSearch index.
   *
   * Args
   *   args(0) = outpath   The full local or S3 output path, ending in ".parquet"

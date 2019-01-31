@@ -19,7 +19,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   case class ProviderRecords(provider: String, input: String, records: RDD[String], count: Long)
 
-  def execute(spark: SparkSession, outpath: String, query: String): String = {
+  def execute(spark: SparkSession, outpath: String): String = {
 
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val year: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy"))
