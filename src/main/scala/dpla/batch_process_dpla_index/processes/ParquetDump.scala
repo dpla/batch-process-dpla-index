@@ -12,7 +12,7 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
 
     val s3write: Boolean = outpath.startsWith("s3")
 
-    val outDirBase: String = outpath.stripSuffix("/") + PathHelper.outDir + "all.parquet/"
+    val outDirBase: String = outpath.stripSuffix("/") + PathHelper.outDir + "/all.parquet/"
 
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
 
