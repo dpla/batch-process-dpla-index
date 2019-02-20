@@ -61,7 +61,7 @@ object Sitemap extends S3FileHelper with LocalFileWriter with ManifestWriter {
       "Total URL count" -> id_count.toString,
       "Max URLs per subfile" -> maxRows.toString)
 
-    val manifest: String = buildManifest(opts, dateTime)
+    val manifest: String = buildManifest(opts)
 
     if (s3write) writeS3(outpath, "_MANIFEST", manifest)
     else writeLocal(outpath, "_MANIFEST", manifest)

@@ -112,7 +112,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
       "Provider count" -> providerScores.count.toString,
       "Contributor count" -> contributorScores.count.toString
     )
-    val manifest: String = buildManifest(opts, dateTime)
+    val manifest: String = buildManifest(opts)
 
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)

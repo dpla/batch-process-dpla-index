@@ -27,7 +27,7 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
       "Record count" -> count.toString,
       "Data source" -> "DPLA ElasticSearch Index")
 
-    val manifest: String = buildManifest(opts, dateTime)
+    val manifest: String = buildManifest(opts)
 
     if (s3write) writeS3(outpath, "_MANIFEST", manifest)
     else writeLocal(outpath, "_MANIFEST", manifest)

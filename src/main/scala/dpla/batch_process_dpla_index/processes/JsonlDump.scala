@@ -69,7 +69,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
         "Record count" -> x.count.toString,
         "Max records per file (approximate)" -> maxRows.toString,
         "Data source" -> x.input)
-      writeManifest(manifestOpts, outDir, dateTime)
+      writeManifest(manifestOpts, outDir)
     })
 
     // Export all providers dump
@@ -89,7 +89,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
       x.provider + " record count" -> x.count.toString
     )).reduce(_++_)
 
-    writeManifest(allOpts ++ providerOpts, outDir, dateTime)
+    writeManifest(allOpts ++ providerOpts, outDir)
 
     outDir
   }
@@ -99,10 +99,10 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
     data.repartition(numPartitions).saveAsTextFile(outDir, classOf[GzipCodec])
   }
 
-  def writeManifest(opts: Map[String, String], outDir: String, dateTime: ZonedDateTime): Unit = {
+  def writeManifest(opts: Map[String, String], outDir: String): Unit = {
     val s3write: Boolean = outDir.startsWith("s3")
 
-    val manifest: String = buildManifest(opts, dateTime)
+    val manifest: String = buildManifest(opts)
 
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)
