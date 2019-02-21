@@ -29,8 +29,8 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
 
     val manifest: String = buildManifest(opts)
 
-    if (s3write) writeS3(outpath, "_MANIFEST", manifest)
-    else writeLocal(outpath, "_MANIFEST", manifest)
+    if (s3write) writeS3(outDirBase, "_MANIFEST", manifest)
+    else writeLocal(outDirBase, "_MANIFEST", manifest)
 
     // return output path
     outDirBase
