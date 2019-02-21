@@ -8,9 +8,10 @@ import org.apache.spark.sql.SparkSession
   * Main entry point for executing all processes.
   *
   * Args
-  *   args(0) = parquetOut    The full local or S3 output path, ending in ".parquet"
-  *                           e.g. s3a://dpla-provider-export/2019/01/all.parquet
-  *
+  *   args(0) = parquetOut    Local or S3 path to the top-level directory destination.
+  * *                         Month and year will be added to the auto-generated file paths.
+  * *                         e.g. s3a://dpla-provider-export/
+  * *
   *   args(1) = jsonlOut      Local or S3 path to the top-level directory destination.
   *                           Month and year will be added to the auto-generated file paths.
   *                           e.g. s3a://dpla-provider-export/
