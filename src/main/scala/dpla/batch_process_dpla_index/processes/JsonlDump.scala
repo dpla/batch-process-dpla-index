@@ -3,7 +3,7 @@ package dpla.batch_process_dpla_index.processes
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 
-import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
+import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -21,10 +21,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   def execute(spark: SparkSession, outpath: String): String = {
 
-    val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
-    val year: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy"))
-    val month: String = dateTime.format(DateTimeFormatter.ofPattern("MM"))
-    val outDirBase: String = outpath.stripSuffix("/") + "/" + year + "/" + month
+    val outDirBase: String = outpath.stripSuffix("/") + PathHelper.outDir
 
     val allFiles = getS3Keys(s3client.listObjects(inputBucket)).toList
 
@@ -72,7 +69,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
         "Record count" -> x.count.toString,
         "Max records per file (approximate)" -> maxRows.toString,
         "Data source" -> x.input)
-      writeManifest(manifestOpts, outDir, dateTime)
+      writeManifest(manifestOpts, outDir)
     })
 
     // Export all providers dump
@@ -92,7 +89,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
       x.provider + " record count" -> x.count.toString
     )).reduce(_++_)
 
-    writeManifest(allOpts ++ providerOpts, outDir, dateTime)
+    writeManifest(allOpts ++ providerOpts, outDir)
 
     outDir
   }
@@ -102,10 +99,10 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
     data.repartition(numPartitions).saveAsTextFile(outDir, classOf[GzipCodec])
   }
 
-  def writeManifest(opts: Map[String, String], outDir: String, dateTime: ZonedDateTime): Unit = {
+  def writeManifest(opts: Map[String, String], outDir: String): Unit = {
     val s3write: Boolean = outDir.startsWith("s3")
 
-    val manifest: String = buildManifest(opts, dateTime)
+    val manifest: String = buildManifest(opts)
 
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)

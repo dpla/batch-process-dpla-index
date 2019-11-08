@@ -3,7 +3,7 @@ package dpla.batch_process_dpla_index.processes
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 
-import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
+import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 
@@ -12,11 +12,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
   def execute(spark: SparkSession, inpath: String, outpath: String): String = {
 
     val s3write: Boolean = outpath.startsWith("s3")
-
-    val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
-    val year: String = dateTime.format(DateTimeFormatter.ofPattern("yyyy"))
-    val month: String = dateTime.format(DateTimeFormatter.ofPattern("MM"))
-    val outDir: String = outpath.stripSuffix("/") + "/" + year + "/" + month
+    val outDir: String = outpath.stripSuffix("/") + PathHelper.outDir
 
     val docs: DataFrame = spark.read.parquet(inpath)
 
@@ -116,7 +112,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
       "Provider count" -> providerScores.count.toString,
       "Contributor count" -> contributorScores.count.toString
     )
-    val manifest: String = buildManifest(opts, dateTime)
+    val manifest: String = buildManifest(opts)
 
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)
