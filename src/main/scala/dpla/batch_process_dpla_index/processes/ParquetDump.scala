@@ -4,7 +4,6 @@ import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.storage.StorageLevel
 
 object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter {
 
@@ -16,12 +15,18 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
 
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
 
-    val dump: DataFrame = spark.read.format("dpla.datasource").option("query", query)
-      .load.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    // Read data from ElasticSearch and save as parquet
 
-    val count: Long = dump.count
+    val dump: DataFrame = spark.read.format("dpla.datasource").option("query", query).load
 
     dump.write.parquet(outDirBase)
+
+    // Read back parquet file that was just written
+    // This allows us to avoid persisting ElasticSearch dump in memory
+
+    val readBack: DataFrame = spark.read.parquet(outDirBase)
+
+    val count: Long = readBack.count
 
     val opts: Map[String, String] = Map(
       "Record count" -> count.toString,
