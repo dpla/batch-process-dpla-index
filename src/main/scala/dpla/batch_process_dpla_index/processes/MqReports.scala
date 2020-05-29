@@ -1,8 +1,5 @@
 package dpla.batch_process_dpla_index.processes
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
-
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
@@ -55,7 +52,16 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                           as standardizedRights,
                                         case when size(object) == 0
                                           then 0 else 1 end
-                                          as preview
+                                          as preview,
+                                        case when iiifManifest is null
+                                          then 0 else 1 end
+                                          as iiifManifest,
+                                        case when size(mediaMaster) == 0
+                                          then 0 else 1 end
+                                          as mediaMaster,
+                                        case when iiifManifest is null and size(mediaMaster) == 0
+                                          then 0 else 1 end
+                                          as mediaAccess
                                         from items""")
 
     val providerScores = itemdata.filter("provider is not null")
@@ -73,6 +79,9 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("rights").alias("rights"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
+        mean("iifManifest").alias("iifManifest"),
+        mean("mediaMaster").alias("mediaMaster"),
+        mean("mediaAccess").alias("mediaAccess"),
         sum("count").alias("count"))
 
     val contributorScores = itemdata.filter("provider is not null")
@@ -91,6 +100,9 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("rights").alias("rights"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
+        mean("iifManifest").alias("iifManifest"),
+        mean("mediaMaster").alias("mediaMaster"),
+        mean("mediaAccess").alias("mediaAccess"),
         sum("count").alias("count"))
 
     providerScores

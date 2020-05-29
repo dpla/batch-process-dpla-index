@@ -12,6 +12,7 @@ case class DplaDoc(
   preview: Seq[WebResource], // option?
   provider: Option[NamedEntity],
   rights: Option[String],
+  iiifManifest: Option[String],
   sourceResource: SourceResource,
   typeError: Seq[TypeError]
 )

@@ -46,6 +46,7 @@ class DplaDataRelation (query: String)
       val intermediateProvider = getStringOpt(doc.get("intermediateProvider"))
       val isShownAt = getStringOpt(doc.get("isShownAt"))
       val rights = getStringOpt(doc.get("rights"))
+      val iiifManifest = getStringOpt(doc.get("iiifManifest"))
 
       val dataProvider = getStringSeq(doc.get("dataProvider"))
       val `object` = getStringSeq(doc.get("object"))
@@ -67,7 +68,8 @@ class DplaDataRelation (query: String)
             handleTypeErrorOpt(intermediateProvider.left.toOption, "intermediateProvider"),
             handleTypeErrorOpt(isShownAt.left.toOption, "isShownAt"),
             handleTypeErrorOpt(`object`.left.toOption, "object"),
-            handleTypeErrorOpt(rights.left.toOption, "rights")
+            handleTypeErrorOpt(rights.left.toOption, "rights"),
+            handleTypeErrorOpt(iiifManifest.left.toOption, "iiifManifest")
           ).flatten
         )
       )
@@ -84,6 +86,7 @@ class DplaDataRelation (query: String)
         preview = preview.map(_._1),
         provider = provider.map(_._1),
         rights = rights.right.getOrElse(None),
+        iiifManifest = iiifManifest.right.getOrElse(None),
         sourceResource = sourceResource._1,
         typeError = typeErrors
       )
