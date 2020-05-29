@@ -1,8 +1,5 @@
 package dpla.batch_process_dpla_index.processes
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
-
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.rdd.RDD
