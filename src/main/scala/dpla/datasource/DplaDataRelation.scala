@@ -50,17 +50,16 @@ class DplaDataRelation (query: String)
 
       val dataProvider = getStringSeq(doc.get("dataProvider"))
       val `object` = getStringSeq(doc.get("object"))
+      val mediaMaster = getStringSeq(doc.get("mediaMaster"))
 
       val hasView = getWebResourceSeq(getMapSeq(doc.get("hasView")))
       val isPartOf = getWebResourceSeq(getMapSeq(doc.get("isPartOf")))
       val preview = getWebResourceSeq(getMapSeq(doc.get("preview")))
-      val mediaMaster = getWebResourceSeq(getMapSeq(doc.get("mediaMaster")))
 
       val typeErrors: Seq[TypeError] = Seq(
         hasView.map(z => handleTypeErrorSeq(z._2, "hasView")),
         isPartOf.map(z => handleTypeErrorSeq(z._2, "isPartOf")),
         preview.map(z => handleTypeErrorSeq(z._2, "preview")),
-        mediaMaster.map(z => handleTypeErrorSeq(z._2, "mediaMaster"))
       ).flatten.flatten.union(
         Seq(
           handleTypeErrorSeq(sourceResource._2, "sourceResource"),
@@ -72,7 +71,8 @@ class DplaDataRelation (query: String)
             handleTypeErrorOpt(isShownAt.left.toOption, "isShownAt"),
             handleTypeErrorOpt(`object`.left.toOption, "object"),
             handleTypeErrorOpt(rights.left.toOption, "rights"),
-            handleTypeErrorOpt(iiifManifest.left.toOption, "iiifManifest")
+            handleTypeErrorOpt(iiifManifest.left.toOption, "iiifManifest"),
+            handleTypeErrorOpt(mediaMaster.left.toOption, "mediaMaster")
           ).flatten
         )
       )
@@ -86,7 +86,7 @@ class DplaDataRelation (query: String)
         intermediateProvider = intermediateProvider.right.getOrElse(None),
         isPartOf = isPartOf.map(_._1),
         isShownAt = isShownAt.right.getOrElse(None),
-        mediaMaster = mediaMaster.map(_._1),
+        mediaMaster = mediaMaster.right.getOrElse(Seq()),
         `object` = `object`.right.getOrElse(Seq()),
         preview = preview.map(_._1),
         provider = provider.map(_._1),

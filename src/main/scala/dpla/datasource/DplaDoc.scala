@@ -9,7 +9,7 @@ case class DplaDoc(
   intermediateProvider: Option[String],
   isPartOf: Seq[WebResource], // necessary?
   isShownAt: Option[String],
-  mediaMaster: Seq[WebResource],
+  mediaMaster: Seq[String],
   `object`: Seq[String],
   preview: Seq[WebResource], // option?
   provider: Option[NamedEntity],
