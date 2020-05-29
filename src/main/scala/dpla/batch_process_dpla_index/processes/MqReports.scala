@@ -79,7 +79,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("rights").alias("rights"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
-        mean("iifManifest").alias("iifManifest"),
+        mean("iiifManifest").alias("iiifManifest"),
         mean("mediaMaster").alias("mediaMaster"),
         mean("mediaAccess").alias("mediaAccess"),
         sum("count").alias("count"))
@@ -100,7 +100,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("rights").alias("rights"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
-        mean("iifManifest").alias("iifManifest"),
+        mean("iiifManifest").alias("iiifManifest"),
         mean("mediaMaster").alias("mediaMaster"),
         mean("mediaAccess").alias("mediaAccess"),
         sum("count").alias("count"))
