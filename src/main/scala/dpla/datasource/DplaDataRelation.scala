@@ -26,7 +26,7 @@ class DplaDataRelation (query: String)
 
     // TODO: user-defined query params
     val configs = Map(
-      "spark.es.nodes" -> "search-prod1-es7.internal.dp.la",
+      "spark.es.nodes" -> "search.internal.dp.la",
       "spark.es.nodes.wan.only" -> "true",
       "spark.es.mapping.date.rich" -> "false",
       "spark.es.resource" -> "dpla_alias/item",
