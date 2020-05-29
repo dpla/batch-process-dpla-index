@@ -5,14 +5,15 @@ case class DplaDoc(
   id: String,
   dataProvider: Seq[String],
   hasView: Seq[WebResource],
+  iiifManifest: Option[String],
   intermediateProvider: Option[String],
   isPartOf: Seq[WebResource], // necessary?
   isShownAt: Option[String],
+  mediaMaster: Seq[WebResource],
   `object`: Seq[String],
   preview: Seq[WebResource], // option?
   provider: Option[NamedEntity],
   rights: Option[String],
-  iiifManifest: Option[String],
   sourceResource: SourceResource,
   typeError: Seq[TypeError]
 )
