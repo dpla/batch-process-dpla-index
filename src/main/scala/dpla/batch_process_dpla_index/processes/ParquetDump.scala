@@ -1,7 +1,5 @@
 package dpla.batch_process_dpla_index.processes
 
-import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
-
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -12,8 +10,6 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
     val s3write: Boolean = outpath.startsWith("s3")
 
     val outDirBase: String = outpath.stripSuffix("/") + PathHelper.outDir + "/all.parquet/"
-
-    val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
 
     // Read data from ElasticSearch and save as parquet
 

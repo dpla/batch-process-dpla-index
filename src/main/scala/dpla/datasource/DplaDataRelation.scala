@@ -26,7 +26,7 @@ class DplaDataRelation (query: String)
 
     // TODO: user-defined query params
     val configs = Map(
-      "spark.es.nodes" -> "search-prod1-es7.internal.dp.la",
+      "spark.es.nodes" -> "search.internal.dp.la",
       "spark.es.nodes.wan.only" -> "true",
       "spark.es.mapping.date.rich" -> "false",
       "spark.es.resource" -> "dpla_alias/item",
@@ -46,9 +46,12 @@ class DplaDataRelation (query: String)
       val intermediateProvider = getStringOpt(doc.get("intermediateProvider"))
       val isShownAt = getStringOpt(doc.get("isShownAt"))
       val rights = getStringOpt(doc.get("rights"))
+      val iiifManifest = getStringOpt(doc.get("iiifManifest"))
 
       val dataProvider = getStringSeq(doc.get("dataProvider"))
       val `object` = getStringSeq(doc.get("object"))
+      val mediaMaster = getStringSeq(doc.get("mediaMaster"))
+
       val hasView = getWebResourceSeq(getMapSeq(doc.get("hasView")))
       val isPartOf = getWebResourceSeq(getMapSeq(doc.get("isPartOf")))
       val preview = getWebResourceSeq(getMapSeq(doc.get("preview")))
@@ -67,7 +70,9 @@ class DplaDataRelation (query: String)
             handleTypeErrorOpt(intermediateProvider.left.toOption, "intermediateProvider"),
             handleTypeErrorOpt(isShownAt.left.toOption, "isShownAt"),
             handleTypeErrorOpt(`object`.left.toOption, "object"),
-            handleTypeErrorOpt(rights.left.toOption, "rights")
+            handleTypeErrorOpt(rights.left.toOption, "rights"),
+            handleTypeErrorOpt(iiifManifest.left.toOption, "iiifManifest"),
+            handleTypeErrorOpt(mediaMaster.left.toOption, "mediaMaster")
           ).flatten
         )
       )
@@ -77,9 +82,11 @@ class DplaDataRelation (query: String)
         id = doc("id").asInstanceOf[String],
         dataProvider = dataProvider.right.getOrElse(Seq()),
         hasView = hasView.map(_._1),
+        iiifManifest = iiifManifest.right.getOrElse(None),
         intermediateProvider = intermediateProvider.right.getOrElse(None),
         isPartOf = isPartOf.map(_._1),
         isShownAt = isShownAt.right.getOrElse(None),
+        mediaMaster = mediaMaster.right.getOrElse(Seq()),
         `object` = `object`.right.getOrElse(Seq()),
         preview = preview.map(_._1),
         provider = provider.map(_._1),
