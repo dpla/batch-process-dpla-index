@@ -59,7 +59,7 @@ class DplaDataRelation (query: String)
       val typeErrors: Seq[TypeError] = Seq(
         hasView.map(z => handleTypeErrorSeq(z._2, "hasView")),
         isPartOf.map(z => handleTypeErrorSeq(z._2, "isPartOf")),
-        preview.map(z => handleTypeErrorSeq(z._2, "preview")),
+        preview.map(z => handleTypeErrorSeq(z._2, "preview"))
       ).flatten.flatten.union(
         Seq(
           handleTypeErrorSeq(sourceResource._2, "sourceResource"),
