@@ -20,52 +20,74 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
     val itemdata = spark.sqlContext.sql("""select id,
                                          provider.name as provider,
                                          dataProvider as dataProviders,
-                                        case when size(sourceResource.title) == 0
+                                        case
+                                          when size(sourceResource.title) == 0
                                           then 0 else 1 end
                                           as title,
-                                        case when size(sourceResource.description) == 0
+                                        case
+                                          when size(sourceResource.description) == 0
                                           then 0 else 1 end
                                           as description,
-                                        case when size(sourceResource.creator) == 0
+                                        case
+                                          when size(sourceResource.creator) == 0
                                           then 0 else 1 end
                                           as creator,
-                                        case when size(sourceResource.type) == 0
+                                        case
+                                          when size(sourceResource.type) == 0
                                           then 0 else 1 end
                                           as type,
-                                        case when size(sourceResource.language.name) == 0
+                                        case
+                                          when size(sourceResource.language.name) == 0
                                           then 0 else 1 end
                                           as language,
-                                        case when size(sourceResource.spatial.name) == 0
+                                        case
+                                          when size(sourceResource.spatial.name) == 0
                                           then 0 else 1 end
                                           as spatial,
-                                        case when size(sourceResource.subject.name) == 0
+                                        case
+                                          when size(sourceResource.subject.name) == 0
                                           then 0 else 1 end
                                           as subject,
-                                        case when size(sourceResource.date.displayDate) == 0
+                                        case
+                                          when size(sourceResource.date.displayDate) == 0
                                           then 0 else 1 end
                                           as date,
-                                        case when size(sourceResource.rights) == 0
-                                          then 0 else 1 end
-                                          as rights,
-                                        case when rights is null
+                                        case
+                                          when rights is null
                                           then 0 else 1 end
                                           as standardizedRights,
-                                        case when size(object) == 0
+                                        case
+                                          when rights LIKE '%/NoC-US/%'
+                                            or rights LIKE '%/publicdomain/%'
+                                            or rights LIKE '%/by/%'
+                                            or rights LIKE '%/by-sa/%'
+                                          then 1 else 0 end
+                                          as openLicense,
+                                        case
+                                          when size(sourceResource.rights) == 0
+                                          then 0 else 1 end
+                                          as rights,
+                                        case
+                                          when size(object) == 0
                                           then 0 else 1 end
                                           as preview,
-                                        case when iiifManifest is null
+                                        case
+                                          when iiifManifest is null
                                           then 0 else 1 end
                                           as iiifManifest,
-                                        case when size(mediaMaster) == 0
+                                        case
+                                          when size(mediaMaster) == 0
                                           then 0 else 1 end
                                           as mediaMaster,
-                                        case when iiifManifest is null and size(mediaMaster) == 0
+                                        case
+                                          when iiifManifest is null and size(mediaMaster) == 0
                                           then 0 else 1 end
                                           as mediaAccess
                                         from items""")
 
     val providerScores = itemdata.filter("provider is not null")
       .drop("dataProviders")
+      .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openLicense == 1 then 1 else 0 end"))
       .withColumn("count", lit(1))
       .groupBy("provider")
       .agg(mean("title").alias("title"),
@@ -82,11 +104,14 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("iiifManifest").alias("iiifManifest"),
         mean("mediaMaster").alias("mediaMaster"),
         mean("mediaAccess").alias("mediaAccess"),
+        mean("openLicense").alias("openLicense"),
+        mean("wikimediaReady").alias("wikimediaReady"),
         sum("count").alias("count"))
 
     val contributorScores = itemdata.filter("provider is not null")
       .withColumn("dataProvider", explode(col("dataProviders")))
       .filter("dataProvider is not null")
+      .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openLicense == 1 then 1 else 0 end"))
       .withColumn("count", lit(1))
       .groupBy("dataProvider", "provider")
       .agg(mean("title").alias("title"),
@@ -103,6 +128,8 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("iiifManifest").alias("iiifManifest"),
         mean("mediaMaster").alias("mediaMaster"),
         mean("mediaAccess").alias("mediaAccess"),
+        mean("openLicense").alias("openLicense"),
+        mean("wikimediaReady").alias("wikimediaReady"),
         sum("count").alias("count"))
 
     providerScores
