@@ -62,7 +62,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                             or rights LIKE '%/by/%'
                                             or rights LIKE '%/by-sa/%'
                                           then 1 else 0 end
-                                          as openLicense,
+                                          as openRights,
                                         case
                                           when size(sourceResource.rights) == 0
                                           then 0 else 1 end
@@ -87,7 +87,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
 
     val providerScores = itemdata.filter("provider is not null")
       .drop("dataProviders")
-      .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openLicense == 1 then 1 else 0 end"))
+      .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openRights == 1 then 1 else 0 end"))
       .withColumn("count", lit(1))
       .groupBy("provider")
       .agg(mean("title").alias("title"),
@@ -104,14 +104,14 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("iiifManifest").alias("iiifManifest"),
         mean("mediaMaster").alias("mediaMaster"),
         mean("mediaAccess").alias("mediaAccess"),
-        mean("openLicense").alias("openLicense"),
+        mean("openRights").alias("openRights"),
         mean("wikimediaReady").alias("wikimediaReady"),
         sum("count").alias("count"))
 
     val contributorScores = itemdata.filter("provider is not null")
       .withColumn("dataProvider", explode(col("dataProviders")))
       .filter("dataProvider is not null")
-      .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openLicense == 1 then 1 else 0 end"))
+      .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openRights == 1 then 1 else 0 end"))
       .withColumn("count", lit(1))
       .groupBy("dataProvider", "provider")
       .agg(mean("title").alias("title"),
@@ -128,7 +128,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("iiifManifest").alias("iiifManifest"),
         mean("mediaMaster").alias("mediaMaster"),
         mean("mediaAccess").alias("mediaAccess"),
-        mean("openLicense").alias("openLicense"),
+        mean("openRights").alias("openRights"),
         mean("wikimediaReady").alias("wikimediaReady"),
         sum("count").alias("count"))
 
