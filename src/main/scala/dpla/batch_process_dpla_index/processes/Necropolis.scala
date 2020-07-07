@@ -1,5 +1,8 @@
 package dpla.batch_process_dpla_index.processes
 
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
@@ -9,7 +12,8 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
   // Expects input date in the format "YYYY/MM"
   def execute(spark: SparkSession, newDataPath: String, outpath: String): String = {
 
-    val date: String = newDataPath.stripSuffix("/all.parquet/").split("/").reverse.take(2).reverse.mkString("/")
+    val date: String = newDataPath.stripSuffix("/").stripSuffix("/all.parquet").split("/")
+      .reverse.take(2).reverse.mkString("/")
     val lastDate: String = getLastDate(date)
 
     val oldDataPath: String = s"s3a://dpla-provider-export/$lastDate/all.parquet/"
@@ -51,11 +55,17 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
 
   // Expects input date in the format YYYY/MM
   // Returns date in the format YYYY/MM
+//  def getLastDate(date: String): String = {
+//    val year = date.split("/")(0)
+//    val month = date.split("/")(1)
+//    if (month == "01") (year.toInt - 1).toString + "/12"
+//    else year + "/" + (month.toInt - 1).toString
+//  }
+
   def getLastDate(date: String): String = {
-    val year = date.split("/")(0)
-    val month = date.split("/")(1)
-    if (month == "01") (year.toInt - 1).toString + "/12"
-    else year + (month.toInt - 1).toString
+    val year = date.split("/")(0).toInt
+    val month = date.split("/")(1).toInt
+    YearMonth.of(year, month).minusMonths(1).format(DateTimeFormatter.ofPattern("yyyy/MM"))
   }
 
   def writeManifest(opts: Map[String, String], outDir: String): Unit = {
