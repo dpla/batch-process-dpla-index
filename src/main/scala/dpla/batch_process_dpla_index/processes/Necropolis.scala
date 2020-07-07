@@ -30,8 +30,9 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
         col("doc.intermediateProvider"),
         col("doc.isShownAt"),
         col("doc.sourceResource.title").as("title"),
-        col("doc.sourceResource.collection.title").as("collection"))
+        flatten(col("doc.sourceResource.collection.title")).as("collection"))
       .join(newData, Seq("id"), "leftanti")
+      .withColumn("lastActive", lit(lastDate))
 
     val oldTombs = spark.read.parquet(oldTombsPath)
 
@@ -55,13 +56,6 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
 
   // Expects input date in the format YYYY/MM
   // Returns date in the format YYYY/MM
-//  def getLastDate(date: String): String = {
-//    val year = date.split("/")(0)
-//    val month = date.split("/")(1)
-//    if (month == "01") (year.toInt - 1).toString + "/12"
-//    else year + "/" + (month.toInt - 1).toString
-//  }
-
   def getLastDate(date: String): String = {
     val year = date.split("/")(0).toInt
     val month = date.split("/")(1).toInt
@@ -76,4 +70,8 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
     if (s3write) writeS3(outDir, "_MANIFEST", manifest)
     else writeLocal(outDir, "_MANIFEST", manifest)
   }
+
+  val toFlat: scala.collection.mutable.WrappedArray[scala.collection.mutable.WrappedArray[String]] =>
+    scala.collection.mutable.IndexedSeq[String] = _.flatten
+  val flatten = udf(toFlat)
 }
