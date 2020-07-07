@@ -8,9 +8,12 @@ import org.apache.spark.sql.SparkSession
   * Main entry point for generating a parquet dump of the ghost records.
   *
   * Args
-  *   args(0) = outpath   Local or S3 path to the top-level directory destination.
-  *                       Month and year will be added to the auto-generated file paths.
-  *                       e.g. s3a://necropolis/
+  *   args(0) = outpath         Local or S3 path to the top-level directory destination.
+  *                             Month and year will be added to the auto-generated file paths.
+  *                             e.g. s3a://dpla-necropolis/
+  *
+  *   args(1) = newRecordsPath   Local or S3 path to the parquet file of records.
+  *                              e.g. s3a://dpla-provider-export/2020/05/all.parquet
   *
   * A spark-submit invocation requires the following packages:
   *   com.amazonaws:aws-java-sdk:1.7.4

@@ -39,10 +39,12 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
     System.out.println("Tombstone count: " + count)
 
     val opts: Map[String, String] = Map(
-      "Ghost record count" -> count.toString,
+      "Ghost records count" -> count.toString,
       "New data source" -> newDataPath,
       "Old data source" -> oldDataPath,
-      "Old tombs path" -> oldTombsPath)
+      "Old ghost records source" -> oldTombsPath)
+
+    writeManifest(opts, newTombsPath)
 
     newTombsPath
   }
