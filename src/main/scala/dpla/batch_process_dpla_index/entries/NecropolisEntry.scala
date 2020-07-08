@@ -12,8 +12,12 @@ import org.apache.spark.sql.SparkSession
   *                             Month and year will be added to the auto-generated file paths.
   *                             e.g. s3a://dpla-necropolis/
   *
-  *   args(1) = newRecordsPath   Local or S3 path to the parquet file of records.
-  *                              e.g. s3a://dpla-provider-export/2020/05/all.parquet
+  *   args(1) = newRecordsPath  Local or S3 path to the parquet file of records.
+  *                             e.g. s3a://dpla-provider-export/2020/05/all.parquet
+  *
+  *   args(2) = previousDate    Optional
+  *                             Date of the previous tombstones / item dataset for comparison with newRecordsPath
+  *                             Default is one month prior to the date specified in newRecordsPath
   *
   * A spark-submit invocation requires the following packages:
   *   com.amazonaws:aws-java-sdk:1.7.4
@@ -26,13 +30,14 @@ object NecropolisEntry {
 
   def main(args: Array[String]): Unit = {
 
-    val outpath = args(0)
-    val newRecordsPath = args(1)
+    val outpath: String = args(0)
+    val newRecordsPath: String = args(1)
+    val previousDate: Option[String] = args.lift(2)
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Necropolis")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    Necropolis.execute(spark, newRecordsPath, outpath)
+    Necropolis.execute(spark, newRecordsPath, outpath, previousDate)
 
     spark.stop()
   }
