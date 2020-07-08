@@ -20,7 +20,7 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
     val newTombsPath: String = outpath.stripSuffix("/") + "/" + date + "/tombstones.parquet/"
     val oldTombsPath: String = outpath.stripSuffix("/") + "/" + lastDate + "/tombstones.parquet/"
 
-    val newData: DataFrame = spark.read.parquet(newDataPath).select("doc.id")
+    val newData: DataFrame = spark.read.parquet(newDataPath).select("doc.id").distinct
 
     val newTombs: DataFrame = spark.read.parquet(oldDataPath)
       .select(
@@ -31,10 +31,11 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
         col("doc.isShownAt"),
         col("doc.sourceResource.title").as("title"),
         flatten(col("doc.sourceResource.collection.title")).as("collection"))
+      .distinct
       .join(newData, Seq("id"), "leftanti")
       .withColumn("lastActive", lit(lastDate))
 
-    val oldTombs = spark.read.parquet(oldTombsPath)
+    val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
     val tombstones = oldTombs.union(newTombs)
 
