@@ -12,6 +12,8 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
   // Expects previous date in the format "YYYY/MM".  Default is one month prior to the date in newDataPath.
   def execute(spark: SparkSession, newDataPath: String, outpath: String, previousDate: Option[String]): String = {
 
+    // Parse date from newDataPath in the form YYYY/MM.
+    // Expect that this pathname will follow standard naming conventions and thus will end with YYYY/MM/all.parquet
     val date: String = newDataPath.stripSuffix("/").stripSuffix("/all.parquet").split("/")
       .reverse.take(2).reverse.mkString("/")
     val lastDate: String = previousDate.getOrElse(getLastDate(date))
@@ -20,8 +22,11 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
     val newTombsPath: String = outpath.stripSuffix("/") + "/" + date + "/tombstones.parquet/"
     val oldTombsPath: String = outpath.stripSuffix("/") + "/" + lastDate + "/tombstones.parquet/"
 
+    // Get only the IDs from the new items.
     val newData: DataFrame = spark.read.parquet(newDataPath).select("doc.id").distinct
 
+    // Get all relevant fields form the old items.
+    // Select only those records that appear in the old item dataset but not in the new item dataset.
     val newTombs: DataFrame = spark.read.parquet(oldDataPath)
       .select(
         col("doc.id"),
@@ -35,8 +40,10 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
       .join(newData, Seq("id"), "leftanti")
       .withColumn("lastActive", lit(lastDate))
 
+    //  Get the old tombstones.
     val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
+    // Join old and new tombstones.
     val tombstones = oldTombs.union(newTombs)
 
     tombstones.write.parquet(newTombsPath)
@@ -72,6 +79,7 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
     else writeLocal(outDir, "_MANIFEST", manifest)
   }
 
+  // UDF to flatten an array of arrays.
   val toFlat: scala.collection.mutable.WrappedArray[scala.collection.mutable.WrappedArray[String]] =>
     scala.collection.mutable.IndexedSeq[String] = _.flatten
   val flatten = udf(toFlat)
