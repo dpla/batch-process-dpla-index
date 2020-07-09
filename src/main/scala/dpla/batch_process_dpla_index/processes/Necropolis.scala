@@ -25,7 +25,7 @@ object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter 
     // Get only the IDs from the new items.
     val newData: DataFrame = spark.read.parquet(newDataPath).select("doc.id").distinct
 
-    // Get all relevant fields form the old items.
+    // Get all relevant fields from the old items.
     // Select only those records that appear in the old item dataset but not in the new item dataset.
     val newTombs: DataFrame = spark.read.parquet(oldDataPath)
       .select(
