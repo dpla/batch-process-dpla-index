@@ -26,7 +26,11 @@ import org.apache.spark.sql.SparkSession
   *
   *   args(4) = sitemapUrlPrefix   e.g. http://sitemaps.dp.la/
   *
-  *   args(5) = query         Optional parameters for an ElasticSearch query,
+  *   args(5) = tombstoneOut  Local or S3 output path to the top-level directory destination.
+  *                           Month and year will be added to the auto-generated files paths.
+  *                           e.g. s3a://dpla-necropolis/
+  *
+  *   args(6) = query         Optional parameters for an ElasticSearch query,
   *                           e.g. ?q=hamster
   *
   * A spark-submit invocation requires the following packages:
@@ -46,7 +50,8 @@ object AllProcessesEntry {
     val mqOut = args(2)
     val sitemapOut = args(3)
     val sitemapUrlPrefix = args(4)
-    val query = args.lift(5).getOrElse("")
+    val tombstoneOut = args(5)
+    val query = args.lift(6).getOrElse("")
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: All processes")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
@@ -55,6 +60,7 @@ object AllProcessesEntry {
     JsonlDump.execute(spark, jsonlOut)
     MqReports.execute(spark, parquetPath, mqOut)
     Sitemap.execute(spark, parquetPath, sitemapOut, sitemapUrlPrefix)
+    Necropolis.execute(spark, parquetPath, tombstoneOut, None)
 
     spark.stop()
   }
