@@ -76,7 +76,7 @@ object AllProcessesEntry {
       val esPort = "9200"
       val timestamp = LocalDateTime.now.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
       val indexName = s"necropolis-$timestamp"
-      val shards = 5
+      val shards = 3
       val replicas = 1
 
       val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
