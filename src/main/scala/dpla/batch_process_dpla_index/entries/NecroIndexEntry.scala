@@ -7,9 +7,15 @@ import org.apache.spark.sql.SparkSession
 /**
   * Main entry point for generating a parquet dump of the DPLA ElasticSearch index.
   *
-  * Args
-  *   args(0) = inpath   Local or S3 path to the necropolis data dump.
-  *                      e.g. s3a://dpla-necropolis/2020/07/tombstones.parquet
+  * Arguments:
+  *
+  *   0) inpath         Local or S3 path to necropolis data dump.
+  *                     e.g. s3a://dpla-necropolis/2020/07/tombstones.parquet
+  *   1) esClusterHost  ES host e.g. "localhost" or "172.30.5.227"
+  *   2) esPort         ES port e.g. "9200"
+  *   3) indexName      Name ES index that will be created e.g. "mbtest1"
+  *   4) shards         Optional: Number of shards for ES index
+  *   5) replicas       Optional: Number of replicas for ES index
   *
   * A spark-submit invocation requires the following packages:
   *   org.elasticsearch:elasticsearch-spark-20_2.11:7.3.2
