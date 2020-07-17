@@ -1,6 +1,6 @@
 package dpla.batch_process_dpla_index.entries
 
-import dpla.batch_process_dpla_index.processes.Necropolis
+import dpla.batch_process_dpla_index.processes.NecroData
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
@@ -26,7 +26,7 @@ import org.apache.spark.sql.SparkSession
   *   Double-check build file for correct package versions
   */
 
-object NecropolisEntry {
+object NecroDataEntry {
 
   def main(args: Array[String]): Unit = {
 
@@ -37,7 +37,7 @@ object NecropolisEntry {
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Necropolis")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    Necropolis.execute(spark, newRecordsPath, outpath, previousDate)
+    NecroData.execute(spark, newRecordsPath, outpath, previousDate)
 
     spark.stop()
   }

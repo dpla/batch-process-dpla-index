@@ -7,7 +7,7 @@ import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 
-object Necropolis extends S3FileHelper with LocalFileWriter with ManifestWriter {
+object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   // Expects previous date in the format "YYYY/MM".  Default is one month prior to the date in newDataPath.
   def execute(spark: SparkSession, newDataPath: String, outpath: String, previousDate: Option[String]): String = {

@@ -1,5 +1,8 @@
 package dpla.batch_process_dpla_index.entries
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import dpla.batch_process_dpla_index.processes._
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -30,6 +33,10 @@ import org.apache.spark.sql.SparkSession
   *                           Month and year will be added to the auto-generated files paths.
   *                           e.g. s3a://dpla-necropolis/
   *
+  *   args(7) = doNecro       Boolean, default is false.
+  *                           Set to true if you want to compute necropolis data and index to search.internal.dp.la
+  *                           This process is too intensive to run locally.
+  *
   *   args(6) = query         Optional parameters for an ElasticSearch query,
   *                           e.g. ?q=hamster
   *
@@ -51,7 +58,8 @@ object AllProcessesEntry {
     val sitemapOut = args(3)
     val sitemapUrlPrefix = args(4)
     val tombstoneOut = args(5)
-    val query = args.lift(6).getOrElse("")
+    val doNecro = args.lift(6).getOrElse("false").toBoolean
+    val query = args.lift(7).getOrElse("")
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: All processes")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
@@ -60,8 +68,20 @@ object AllProcessesEntry {
     JsonlDump.execute(spark, jsonlOut)
     MqReports.execute(spark, parquetPath, mqOut)
     Sitemap.execute(spark, parquetPath, sitemapOut, sitemapUrlPrefix)
-    Necropolis.execute(spark, parquetPath, tombstoneOut, None)
 
+    if (doNecro){
+      // TODO Double check that these are good default values - should any be parameterized?
+      val esClusterHost = "search.internal.dp.la"
+      val esPort = "9200"
+      val timestamp = LocalDateTime.now.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+      val indexName = s"necropolis-$timestamp"
+      val shards = 5
+      val replicas = 1
+
+      val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
+      NecroIndex.execute(spark, necroPath, esClusterHost, esPort, indexName, shards, replicas)
+    }
+    
     spark.stop()
   }
 }
