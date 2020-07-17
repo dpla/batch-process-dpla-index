@@ -5,7 +5,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 /**
-  * Main entry point for generating a parquet dump of the DPLA ElasticSearch index.
+  * Main entry point for building Necropolis Index.
   *
   * Arguments:
   *

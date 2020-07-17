@@ -33,17 +33,18 @@ import org.apache.spark.sql.SparkSession
   *                           Month and year will be added to the auto-generated files paths.
   *                           e.g. s3a://dpla-necropolis/
   *
-  *   args(7) = doNecro       Boolean, default is false.
+  *   args(6) = doNecro       Boolean, default is false.
   *                           Set to true if you want to compute necropolis data and index to search.internal.dp.la
   *                           This process is too intensive to run locally.
   *
-  *   args(6) = query         Optional parameters for an ElasticSearch query,
+  *   args(7) = query         Optional parameters for an ElasticSearch query,
   *                           e.g. ?q=hamster
   *
   * A spark-submit invocation requires the following packages:
   *   org.elasticsearch:elasticsearch-spark-20_2.11:7.3.2
   *   com.amazonaws:aws-java-sdk:1.7.4
   *   org.apache.hadoop:hadoop-aws:2.7.6
+  *   com.squareup.okhttp3:okhttp:3.8.0
   *
   *   Double-check build file for correct package versions
   */

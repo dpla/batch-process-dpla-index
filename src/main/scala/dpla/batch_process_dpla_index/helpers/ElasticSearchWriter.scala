@@ -16,8 +16,6 @@ object ElasticSearchWriter {
     val configs = Map(
       "es.nodes" -> esClusterHost,
       "es.port" -> esPort,
-//      "es.input.json" -> "no",
-//      "es.output.json" -> "yes",
       "es.mapping.id" -> "id",
       "es.write.operation" -> "upsert",
       "es.index.auto.create" -> "no"

@@ -42,7 +42,7 @@ object NecroIndex {
     println("Done.")
 
     val duration: String = ((System.currentTimeMillis() - start) / 60000.0).toString
-    println(s"Runtime: $duration minutes.")
+    println(s"Necropolis index runtime: $duration minutes.")
   }
 
   private def buildHttpClient =

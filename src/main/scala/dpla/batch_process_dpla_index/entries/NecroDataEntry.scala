@@ -34,7 +34,7 @@ object NecroDataEntry {
     val newRecordsPath: String = args(1)
     val previousDate: Option[String] = args.lift(2)
 
-    val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Necropolis")
+    val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Generate Necropolis Data")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
     NecroData.execute(spark, newRecordsPath, outpath, previousDate)
