@@ -1,0 +1,92 @@
+{
+  "settings" : {
+    "index": {},
+    "analysis": {
+      "normalizer": {
+        "canonicalsort": {
+          "type": "custom",
+          "char_filter": "canonicalsort_char_filter",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      },
+      "char_filter": {
+        "canonicalsort_char_filter": {
+          "type": "pattern_replace",
+          "pattern": "[^a-z0-9]+|(?:\\bthe\\b|\\bof\\b|\\band\\b|\\ba\\b|\\ban\\b)",
+          "replacement": "",
+          "flags": "CASE_INSENSITIVE"
+        },
+        "editing_notation_filter": {
+          "type": "pattern_replace",
+          "pattern": "[\\[\\]]",
+          "replacement": ""
+        }
+      },
+      "filter": {
+        "shingle": {
+          "max_shingle_size": "4",
+          "min_shingle_size": "2",
+          "output_unigrams": "true",
+          "type": "shingle"
+        }
+      }
+    }
+  },
+  "mappings" : {
+    "item" : {
+      "dynamic" : "false",
+      "properties" : {
+        "id" : {
+          "type" : "keyword"
+        },
+        "provider" : {
+          "type" : "text",
+          "fields" : {
+            "not_analyzed" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "dataProvider" : {
+          "type" : "text",
+          "fields" : {
+            "not_analyzed" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "intermediateProvider" : {
+          "type" : "text",
+          "fields" : {
+            "not_analyzed" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "isShownAt" : {
+          "type" : "keyword"
+        },
+        "collection" : {
+          "type" : "text",
+          "fields" : {
+            "not_analyzed" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "title" : {
+          "type" : "text",
+          "fields" : {
+            "not_analyzed" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "lastActive" : {
+          "type" : "date",
+          "format" : "yyyy/MM"
+        }
+      }
+    }
+  }
+}

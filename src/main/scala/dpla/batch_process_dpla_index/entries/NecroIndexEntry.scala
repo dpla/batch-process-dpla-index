@@ -1,6 +1,6 @@
 package dpla.batch_process_dpla_index.entries
 
-import dpla.batch_process_dpla_index.processes.ParquetDump
+import dpla.batch_process_dpla_index.processes.NecroIndex
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
@@ -15,6 +15,7 @@ import org.apache.spark.sql.SparkSession
   *   org.elasticsearch:elasticsearch-spark-20_2.11:7.3.2
   *   com.amazonaws:aws-java-sdk:1.7.4
   *   org.apache.hadoop:hadoop-aws:2.7.6
+  *   com.squareup.okhttp3:okhttp:3.8.0
   *
   *   Double-check build file for correct package versions
   */
@@ -24,11 +25,17 @@ object NecroIndexEntry {
   def main(args: Array[String]): Unit = {
 
     val inpath = args(0)
+    val esClusterHost: String = args(1)
+    val esPort: String = args(2)
+    val indexName: String = args(3)
+    // TODO: Check that these are correct defaults
+    val shards: Int = if (args.isDefinedAt(4)) args(4).toInt else 5
+    val replicas: Int = if (args.isDefinedAt(5)) args(5).toInt else 1
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Parquet Dump")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    NecroIndex.execute(spark, inpath)
+    NecroIndex.execute(spark, inpath, esClusterHost, esPort, indexName, shards, replicas)
 
     spark.stop()
   }
