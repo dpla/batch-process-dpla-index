@@ -64,10 +64,6 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                           then 1 else 0 end
                                           as openRights,
                                         case
-                                          when size(sourceResource.rights) == 0
-                                          then 0 else 1 end
-                                          as rights,
-                                        case
                                           when size(object) == 0
                                           then 0 else 1 end
                                           as preview,
@@ -98,7 +94,6 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("spatial").alias("spatial"),
         mean("subject").alias("subject"),
         mean("date").alias("date"),
-        mean("rights").alias("rights"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
         mean("iiifManifest").alias("iiifManifest"),
@@ -122,7 +117,6 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("spatial").alias("spatial"),
         mean("subject").alias("subject"),
         mean("date").alias("date"),
-        mean("rights").alias("rights"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
         mean("iiifManifest").alias("iiifManifest"),
