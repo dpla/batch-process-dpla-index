@@ -92,7 +92,7 @@ class Index(
   }
 
   // Set alias for this index.
-  // Delete any old indices with alias.
+  // Delete any old indices with this alias.
   def deploy(alias: String): Unit = {
     val oldIndices: Set[String] = getAliasedIndices(alias)
     setExclusiveAlias(alias, oldIndices)
@@ -118,7 +118,7 @@ class Index(
               s"${response.message})"
           )
         else {
-          // There is no existing index with the given alias, return empty set.
+          // A 404 error indicates that there is no existing index with the given alias, return empty set.
           System.out.println(s"No indices with the alias $alias were found.")
           Set[String]()
         }
@@ -134,20 +134,16 @@ class Index(
     indices
   }
 
-  // Add alias to this index and remove alias from old index.
+  // Add the alias to this index and remove this alias from any old indices.
   private def setExclusiveAlias(alias: String, oldIndices: Set[String]): Unit = {
     implicit val formats = org.json4s.DefaultFormats
-
     val mt: MediaType = MediaType.parse("application/json")
 
     val add = Map("add" -> Map("index" -> indexName, "alias" -> alias))
-
     val remove = oldIndices.toSeq.map(i =>
       Map("remove" -> Map("index" -> i, "alias" -> alias))
     )
-
     val actions = Map("actions" -> (remove :+ add).toList)
-
     val postBody = Serialization.write(actions)
 
     val reqBody: RequestBody = RequestBody.create(mt, postBody)
