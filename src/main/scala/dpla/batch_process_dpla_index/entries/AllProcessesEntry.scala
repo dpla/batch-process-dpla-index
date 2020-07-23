@@ -71,12 +71,12 @@ object AllProcessesEntry {
       // TODO Double check that these are good default values - should any be parameterized?
       val esClusterHost = "search.internal.dp.la"
       val esPort = "9200"
-      val indexName = "necropolis"
+      val alias = "necropolis" // all existing indices with this alias will be deleted
       val shards = 3
       val replicas = 1
 
       val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
-      NecroIndex.execute(spark, necroPath, esClusterHost, esPort, indexName, shards, replicas)
+      NecroIndex.execute(spark, necroPath, esClusterHost, esPort, alias, shards, replicas)
     }
     
     spark.stop()

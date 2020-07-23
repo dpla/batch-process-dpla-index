@@ -33,14 +33,14 @@ object NecroIndexEntry {
     val inpath = args(0)
     val esClusterHost: String = args(1)
     val esPort: String = args(2)
-    val indexName: String = args(3)
+    val alias: String = args(3)
     val shards: Int = args(4).toInt
     val replicas: Int = args(5).toInt
 
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: Build Necropolis Index")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    NecroIndex.execute(spark, inpath, esClusterHost, esPort, indexName, shards, replicas)
+    NecroIndex.execute(spark, inpath, esClusterHost, esPort, alias, shards, replicas)
 
     spark.stop()
   }

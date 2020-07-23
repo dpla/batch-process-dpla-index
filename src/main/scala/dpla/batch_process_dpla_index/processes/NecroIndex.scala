@@ -14,7 +14,7 @@ object NecroIndex {
               inpath: String,
               esClusterHost: String,
               esPort: String,
-              indexName: String,
+              alias: String,
               shards: Int,
               replicas: Int): Unit = {
 
@@ -25,32 +25,32 @@ object NecroIndex {
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val timestamp: String = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
 
-    val timestampedIndexName = indexName + "-" + timestamp
+    val indexName = alias + "-" + timestamp
 
     println(
       f"""
          |Writing tombstones
          |From $inpath
-         |To $esClusterHost:$esPort/$timestampedIndexName
-         |Alias $esClusterHost:$esPort/$indexName
+         |To $esClusterHost:$esPort/$indexName
+         |Alias $esClusterHost:$esPort/$alias
          |Creating $shards shards and $replicas replicas
       """.stripMargin)
 
     println("Setting up.")
     val client: OkHttpClient = buildHttpClient
-    val index = new Index(esClusterHost, esPort, timestampedIndexName, shards, replicas, client)
+    val index = new Index(esClusterHost, esPort, indexName, shards, replicas, client)
 
-    println(s"Creating index $timestampedIndexName")
+    println(s"Creating index $indexName")
     index.createIndex()
 
     println("Saving.")
-    ElasticSearchWriter.saveRecords(timestampedIndexName, spark, inpath, esClusterHost, esPort)
+    ElasticSearchWriter.saveRecords(index, spark, inpath)
 
     println("Enabling replicas.")
     index.createReplicas()
 
-    println(s"Deploying $timestampedIndexName to alias $indexName")
-    index.deploy(indexName)
+    println(s"Deploying $indexName to alias $alias")
+    index.deploy(alias)
 
     println("Done.")
 

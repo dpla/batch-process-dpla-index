@@ -12,9 +12,9 @@ import org.apache.commons.io.IOUtils
 import scala.io.Source
 
 class Index(
-             host: String,
-             port: String,
-             indexName: String,
+             val host: String,
+             val port: String,
+             val indexName: String,
              shards: Int,
              replicas: Int,
              httpClient: OkHttpClient) {
