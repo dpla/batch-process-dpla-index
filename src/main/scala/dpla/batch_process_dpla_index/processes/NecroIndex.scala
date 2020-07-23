@@ -1,5 +1,8 @@
 package dpla.batch_process_dpla_index.processes
 
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
+
 import dpla.batch_process_dpla_index.helpers.{ElasticSearchWriter, Index}
 import org.apache.spark.sql.SparkSession
 import okhttp3.OkHttpClient
@@ -18,26 +21,36 @@ object NecroIndex {
     // start is used to calculate runtime
     val start = System.currentTimeMillis()
 
+    // dateTime is used to create a timestamp for the index name
+    val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
+    val timestamp: String = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+
+    val timestampedIndexName = indexName + "-" + timestamp
+
     println(
       f"""
          |Writing tombstones
          |From $inpath
-         |To $esClusterHost:$esPort/$indexName
+         |To $esClusterHost:$esPort/$timestampedIndexName
+         |Alias $esClusterHost:$esPort/$indexName
          |Creating $shards shards and $replicas replicas
       """.stripMargin)
 
     println("Setting up.")
     val client: OkHttpClient = buildHttpClient
-    val index = new Index(esClusterHost, esPort, indexName, shards, replicas, client)
+    val index = new Index(esClusterHost, esPort, timestampedIndexName, shards, replicas, client)
 
-    println("Creating index.")
+    println(s"Creating index $timestampedIndexName")
     index.createIndex()
 
     println("Saving.")
-    ElasticSearchWriter.saveRecords(indexName, spark, inpath, esClusterHost, esPort)
+    ElasticSearchWriter.saveRecords(timestampedIndexName, spark, inpath, esClusterHost, esPort)
 
     println("Enabling replicas.")
     index.createReplicas()
+
+    println(s"Deploying $timestampedIndexName to alias $indexName")
+    index.deploy(indexName)
 
     println("Done.")
 

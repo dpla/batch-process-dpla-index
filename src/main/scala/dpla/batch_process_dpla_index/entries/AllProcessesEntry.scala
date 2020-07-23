@@ -1,8 +1,5 @@
 package dpla.batch_process_dpla_index.entries
 
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-
 import dpla.batch_process_dpla_index.processes._
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -74,8 +71,7 @@ object AllProcessesEntry {
       // TODO Double check that these are good default values - should any be parameterized?
       val esClusterHost = "search.internal.dp.la"
       val esPort = "9200"
-      val timestamp = LocalDateTime.now.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-      val indexName = s"necropolis-$timestamp"
+      val indexName = "necropolis"
       val shards = 3
       val replicas = 1
 
