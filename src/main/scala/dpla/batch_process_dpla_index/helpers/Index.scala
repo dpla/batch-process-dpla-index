@@ -43,13 +43,15 @@ class Index(
         .put(reqBody)
         .build()
     val response: Response = httpClient.newCall(request).execute()
-    if (!response.isSuccessful) {
-      throw new RuntimeException(
-        s"FAILED request for ${request.url.toString} (${response.code}, " +
-          s"${response.message})"
-      )
-    }
-    response.close()
+    try
+      if (!response.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${request.url.toString} (${response.code}, " +
+            s"${response.message})"
+        )
+      }
+    finally
+      response.close()
   }
 
   def createReplicas(): Unit = {
@@ -65,30 +67,37 @@ class Index(
         .put(replReqBody)
         .build()
     val replResponse: Response = httpClient.newCall(replRequest).execute()
-    if (!replResponse.isSuccessful) {
-      throw new RuntimeException(
-        s"FAILED request for ${replRequest.url.toString} " +
-          s"(${replResponse.code}, ${replResponse.message})"
-      )
-    }
-    replResponse.close()
+
+    try
+      if (!replResponse.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${replRequest.url.toString} " +
+            s"(${replResponse.code}, ${replResponse.message})"
+        )
+      }
+    finally
+      replResponse.close()
   }
 
-  def deleteIndex(): Unit = {
+  def deleteIndex(): Unit =  {
     val request: Request =
       new Request.Builder()
         .url(s"http://$host:$port/$indexName")
         .delete()
         .build()
     val response: Response = httpClient.newCall(request).execute()
-    if (!response.isSuccessful) {
-      throw new RuntimeException(
-        s"FAILED request for ${request.url.toString} (${response.code}, " +
-          s"${response.message})"
-      )
+
+    try {
+      if (!response.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${request.url.toString} (${response.code}, " +
+            s"${response.message})"
+        )
+      }
+      System.out.println(s"Deleted $indexName")
     }
-    System.out.println(s"Deleted $indexName")
-    response.close()
+    finally
+      response.close()
   }
 
   // Set alias for this index.
@@ -110,27 +119,29 @@ class Index(
     val response: Response = httpClient.newCall(request).execute()
 
     val indices: Set[String] =
-      if (!response.isSuccessful)
-        if (response.code != 404)
-          // An unexpected error has occurred
-          throw new RuntimeException(
-            s"FAILED request for ${request.url.toString} (${response.code}, " +
-              s"${response.message})"
-          )
+      try
+        if (!response.isSuccessful)
+          if (response.code != 404)
+            // An unexpected error has occurred
+            throw new RuntimeException(
+              s"FAILED request for ${request.url.toString} (${response.code}, " +
+                s"${response.message})"
+            )
+          else {
+            // A 404 error indicates that there is no existing index with the given alias, return empty set.
+            System.out.println(s"No indices with the alias $alias were found.")
+            Set[String]()
+          }
         else {
-          // A 404 error indicates that there is no existing index with the given alias, return empty set.
-          System.out.println(s"No indices with the alias $alias were found.")
-          Set[String]()
+          // Get the names of all indices with the given alias
+          val iNames = JsonMethods.parse(response.body.string).extract[Map[String, Any]].keySet
+          System.out.println(s"Found indices with the alias $alias:")
+          iNames.foreach(System.out.println)
+          iNames
         }
-      else {
-        // Get the names of all indices with the given alias
-        val iNames = JsonMethods.parse(response.body.string).extract[Map[String, Any]].keySet
-        System.out.println(s"Found indices with the alias $alias:")
-        iNames.foreach(System.out.println)
-        iNames
-      }
+      finally
+        response.close()
 
-    response.close()
     indices
   }
 
@@ -154,12 +165,15 @@ class Index(
         .post(reqBody)
         .build()
     val response: Response = httpClient.newCall(request).execute()
-    if (!response.isSuccessful) {
-      throw new RuntimeException(
-        s"FAILED request for ${request.url.toString} (${response.code}, " +
-          s"${response.message})"
-      )
-    }
-    response.close()
+
+    try
+      if (!response.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${request.url.toString} (${response.code}, " +
+            s"${response.message})"
+        )
+      }
+    finally
+      response.close()
   }
 }
