@@ -4,17 +4,17 @@ import java.io.InputStream
 
 import org.json4s.jackson.JsonMethods
 import org.json4s.JsonDSL._
-import org.json4s.JValue
+import org.json4s.{DefaultFormats, JValue}
+import org.json4s.jackson.Serialization
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody, Response}
-
 import org.apache.commons.io.IOUtils
 
 import scala.io.Source
 
 class Index(
-             host: String,
-             port: String,
-             indexName: String,
+             val host: String,
+             val port: String,
+             val indexName: String,
              shards: Int,
              replicas: Int,
              httpClient: OkHttpClient) {
@@ -43,13 +43,15 @@ class Index(
         .put(reqBody)
         .build()
     val response: Response = httpClient.newCall(request).execute()
-    if (!response.isSuccessful) {
-      throw new RuntimeException(
-        s"FAILED request for ${request.url.toString} (${response.code}, " +
-          s"${response.message})"
-      )
-    }
-    response.close()
+    try
+      if (!response.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${request.url.toString} (${response.code}, " +
+            s"${response.message})"
+        )
+      }
+    finally
+      response.close()
   }
 
   def createReplicas(): Unit = {
@@ -65,12 +67,113 @@ class Index(
         .put(replReqBody)
         .build()
     val replResponse: Response = httpClient.newCall(replRequest).execute()
-    if (!replResponse.isSuccessful) {
-      throw new RuntimeException(
-        s"FAILED request for ${replRequest.url.toString} " +
-          s"(${replResponse.code}, ${replResponse.message})"
-      )
+
+    try
+      if (!replResponse.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${replRequest.url.toString} " +
+            s"(${replResponse.code}, ${replResponse.message})"
+        )
+      }
+    finally
+      replResponse.close()
+  }
+
+  def deleteIndex(): Unit =  {
+    val request: Request =
+      new Request.Builder()
+        .url(s"http://$host:$port/$indexName")
+        .delete()
+        .build()
+    val response: Response = httpClient.newCall(request).execute()
+
+    try {
+      if (!response.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${request.url.toString} (${response.code}, " +
+            s"${response.message})"
+        )
+      }
+      System.out.println(s"Deleted $indexName")
     }
-    replResponse.close()
+    finally
+      response.close()
+  }
+
+  // Set alias for this index.
+  // Delete any old indices with this alias.
+  def deploy(alias: String): Unit = {
+    val oldIndices: Set[String] = getAliasedIndices(alias)
+    setExclusiveAlias(alias, oldIndices)
+    oldIndices.foreach(name => new Index(host, port, name, shards, replicas, httpClient).deleteIndex())
+  }
+
+  private def getAliasedIndices(alias: String): Set[String] = {
+    implicit val formats = DefaultFormats
+
+    val request: Request =
+      new Request.Builder()
+        .url(s"http://$host:$port/_alias/$alias")
+        .get()
+        .build()
+    val response: Response = httpClient.newCall(request).execute()
+
+    val indices: Set[String] =
+      try
+        if (!response.isSuccessful)
+          if (response.code != 404)
+            // An unexpected error has occurred
+            throw new RuntimeException(
+              s"FAILED request for ${request.url.toString} (${response.code}, " +
+                s"${response.message})"
+            )
+          else {
+            // A 404 error indicates that there is no existing index with the given alias, return empty set.
+            System.out.println(s"No indices with the alias $alias were found.")
+            Set[String]()
+          }
+        else {
+          // Get the names of all indices with the given alias
+          val iNames = JsonMethods.parse(response.body.string).extract[Map[String, Any]].keySet
+          System.out.println(s"Found indices with the alias $alias:")
+          iNames.foreach(System.out.println)
+          iNames
+        }
+      finally
+        response.close()
+
+    indices
+  }
+
+  // Add the alias to this index and remove this alias from any old indices.
+  private def setExclusiveAlias(alias: String, oldIndices: Set[String]): Unit = {
+    implicit val formats = org.json4s.DefaultFormats
+    val mt: MediaType = MediaType.parse("application/json")
+
+    val add = Map("add" -> Map("index" -> indexName, "alias" -> alias))
+    val remove = oldIndices.toSeq.map(i =>
+      Map("remove" -> Map("index" -> i, "alias" -> alias))
+    )
+    val actions = Map("actions" -> (remove :+ add).toList)
+    val postBody = Serialization.write(actions)
+
+    val reqBody: RequestBody = RequestBody.create(mt, postBody)
+
+    val request: Request =
+      new Request.Builder()
+        .url(s"http://$host:$port/_aliases")
+        .post(reqBody)
+        .build()
+    val response: Response = httpClient.newCall(request).execute()
+
+    try
+      if (!response.isSuccessful) {
+        throw new RuntimeException(
+          s"FAILED request for ${request.url.toString} (${response.code}, " +
+            s"${response.message})"
+        )
+      }
+    finally
+      response.close()
   }
 }
