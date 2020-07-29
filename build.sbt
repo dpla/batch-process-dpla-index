@@ -13,7 +13,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % "2.3.2" % "provided",
   "org.apache.spark" %% "spark-sql" % "2.3.2" % "provided",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-  "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "7.3.2",
-  "org.apache.hadoop" % "hadoop-aws" % "2.7.6",
+  "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
+  "org.elasticsearch" %% "elasticsearch-spark-20" % "7.3.0",
   "com.squareup.okhttp3" % "okhttp" % "3.8.0"
 )
