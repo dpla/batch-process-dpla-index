@@ -27,7 +27,7 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
     // Get all relevant fields from the old items.
     // Select only those records that appear in the old item dataset but not in the new item dataset.
-    val newTombsWithDups: DataFrame = spark.read.parquet(oldDataPath)
+    val newTombs: DataFrame = spark.read.parquet(oldDataPath)
       .select(
         col("doc.id"),
         col("doc.provider.name").as("provider"),
@@ -45,17 +45,19 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
     // If there is more than one tombstone with the same lastActive date,
     // choose one at random.
     // TODO: is there a better solution than choosing at random for the above scenario?
-    val newTombs: DataFrame =
-      newTombsWithDups.groupBy("id")
-        .agg(last("lastActive").as("lastActive"))
-        .join(newTombsWithDups, Seq("id", "lastActive")) //inner join
-        .dropDuplicates(Seq("id","lastActive"))
+
 
     //  Get the old tombstones.
     val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
     // Join old and new tombstones.
-    val tombstones = oldTombs.union(newTombs)
+    val tombstonesWithDups = oldTombs.union(newTombs)
+
+    val tombstones = tombstonesWithDups
+      .groupBy("id")
+      .agg(last("lastActive").as("lastActive"))
+      .join(tombstonesWithDups, Seq("id", "lastActive"))
+      .dropDuplicates(Seq("id","lastActive"))
 
     tombstones.write.parquet(newTombsPath)
 
