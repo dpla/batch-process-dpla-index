@@ -44,7 +44,10 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
     // Join old and new tombstones.
+    // Filter out any records with missing ids.
     val tombstonesWithDups = oldTombs.union(newTombs)
+      .filter("id is not null")
+      .filter("id != ''")
 
     // If there is more than one "tombstone" (i.e. row) with the same ID,
     // get only the tombstone with the most recent "lastActive" date.
