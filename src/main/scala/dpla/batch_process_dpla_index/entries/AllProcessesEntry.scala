@@ -75,8 +75,8 @@ object AllProcessesEntry {
       val shards = 3
       val replicas = 1
 
-//      val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
-      val necroPath = "s3a://dpla-necropolis/test/2020/07/tombstones.parquet"
+      val parquetPath = "s3a://dpla-provider-export/2020/07/all.parquet"
+      val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
       NecroIndex.execute(spark, necroPath, esClusterHost, esPort, alias, shards, replicas)
     }
     
