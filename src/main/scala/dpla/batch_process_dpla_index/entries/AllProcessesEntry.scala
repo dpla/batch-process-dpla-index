@@ -62,10 +62,10 @@ object AllProcessesEntry {
     val conf: SparkConf = new SparkConf().setAppName("Batch process DPLA index: All processes")
     val spark: SparkSession = SparkSession.builder().config(conf).getOrCreate()
 
-    val parquetPath = ParquetDump.execute(spark, parquetOut, query)
-    JsonlDump.execute(spark, jsonlOut)
-    MqReports.execute(spark, parquetPath, mqOut)
-    Sitemap.execute(spark, parquetPath, sitemapOut, sitemapUrlPrefix)
+//    val parquetPath = ParquetDump.execute(spark, parquetOut, query)
+//    JsonlDump.execute(spark, jsonlOut)
+//    MqReports.execute(spark, parquetPath, mqOut)
+//    Sitemap.execute(spark, parquetPath, sitemapOut, sitemapUrlPrefix)
 
     if (doNecro){
       // TODO Double check that these are good default values - should any be parameterized?
@@ -75,7 +75,8 @@ object AllProcessesEntry {
       val shards = 3
       val replicas = 1
 
-      val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
+//      val necroPath = NecroData.execute(spark, parquetPath, tombstoneOut, None)
+      val necroPath = "s3a://dpla-necropolis/test/2020/07/tombstones.parquet"
       NecroIndex.execute(spark, necroPath, esClusterHost, esPort, alias, shards, replicas)
     }
     
