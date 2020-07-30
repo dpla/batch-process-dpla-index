@@ -44,7 +44,21 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
     // Join old and new tombstones.
-    val tombstones = oldTombs.union(newTombs)
+    // Filter out any records with missing ids.
+    val tombstonesWithDups = oldTombs.union(newTombs)
+      .filter("id is not null")
+      .filter("id != ''")
+
+    // If there is more than one "tombstone" (i.e. row) with the same ID,
+    // get only the tombstone with the most recent "lastActive" date.
+    // If there is more than one tombstone with the same lastActive date,
+    // choose one at random.
+    // TODO: is there a better solution than choosing at random for the above scenario?
+    val tombstones = tombstonesWithDups
+      .groupBy("id")
+      .agg(last("lastActive").as("lastActive"))
+      .join(tombstonesWithDups, Seq("id", "lastActive"))
+      .dropDuplicates(Seq("id","lastActive"))
 
     tombstones.write.parquet(newTombsPath)
 

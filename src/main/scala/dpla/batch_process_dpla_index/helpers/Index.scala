@@ -169,7 +169,7 @@ class Index(
     try
       if (!response.isSuccessful) {
         throw new RuntimeException(
-          s"FAILED request for ${request.url.toString} (${response.code}, " +
+          s"FAILED request for ${request.url.toString} ${request.body.toString} (${response.code}, " +
             s"${response.message})"
         )
       }
