@@ -101,11 +101,9 @@ class Index(
   }
 
   // Set alias for this index.
-  // Delete any old indices with this alias.
   def deploy(alias: String): Unit = {
     val oldIndices: Set[String] = getAliasedIndices(alias)
     setExclusiveAlias(alias, oldIndices)
-    oldIndices.foreach(name => new Index(host, port, name, shards, replicas, httpClient).deleteIndex())
   }
 
   private def getAliasedIndices(alias: String): Set[String] = {
