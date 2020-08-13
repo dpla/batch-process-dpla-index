@@ -4,6 +4,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
+import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 
@@ -14,8 +15,7 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
     // Parse date from newDataPath in the form YYYY/MM.
     // Expect that this pathname will follow standard naming conventions and thus will end with YYYY/MM/all.parquet
-    val date: String = newDataPath.stripSuffix("/").stripSuffix("/all.parquet").split("/")
-      .reverse.take(2).reverse.mkString("/")
+    val date: String = newDataPath.stripSuffix("/").stripSuffix("/all.parquet").split("/").takeRight(2).mkString("/")
     val lastDate: String = previousDate.getOrElse(getLastDate(date))
 
     val oldDataPath: String = s"s3a://dpla-provider-export/$lastDate/all.parquet/"
@@ -27,6 +27,7 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
     // Get all relevant fields from the old items.
     // Select only those records that appear in the old item dataset but not in the new item dataset.
+    // Filter out any records with missing ids.
     val newTombs: DataFrame = spark.read.parquet(oldDataPath)
       .select(
         col("doc.id"),
@@ -34,26 +35,31 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
         col("doc.dataProvider"),
         col("doc.intermediateProvider"),
         col("doc.isShownAt"),
+        col("doc.object"),
         col("doc.sourceResource.title").as("title"),
+        col("doc.sourceResource.identifier").as("identifier"),
         flatten(col("doc.sourceResource.collection.title")).as("collection"))
       .distinct
       .join(newData, Seq("id"), "leftanti")
+      .where("id is not null")
+      .where("id != ''")
       .withColumn("lastActive", lit(lastDate))
 
     //  Get the old tombstones.
     val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
-    // Join old and new tombstones.
-    // Filter out any records with missing ids.
-    val tombstonesWithDups = oldTombs.union(newTombs)
-      .filter("id is not null")
-      .filter("id != ''")
+    // Get old tombstones whose IDs do not appear in new tombstones.
+    // Join the above with new tombstones to make complete set without duplicate IDs.
+    // In the rare case that an item is taken out of DPLA and put back in multiple times,
+    // this ensures that the most recent version of the record is always in the necropolis.
+    val tombstonesWithDups = oldTombs
+      .join(newTombs, Seq("id"), "leftanti")
+      .union(newTombs)
 
     // If there is more than one "tombstone" (i.e. row) with the same ID,
     // get only the tombstone with the most recent "lastActive" date.
     // If there is more than one tombstone with the same lastActive date,
     // choose one at random.
-    // TODO: is there a better solution than choosing at random for the above scenario?
     val tombstones = tombstonesWithDups
       .groupBy("id")
       .agg(last("lastActive").as("lastActive"))
@@ -96,5 +102,5 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
   // UDF to flatten an array of arrays.
   val toFlat: scala.collection.mutable.WrappedArray[scala.collection.mutable.WrappedArray[String]] =>
     scala.collection.mutable.IndexedSeq[String] = _.flatten
-  val flatten = udf(toFlat)
+  val flatten: UserDefinedFunction = udf(toFlat)
 }
