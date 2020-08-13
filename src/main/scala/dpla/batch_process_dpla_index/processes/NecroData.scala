@@ -52,19 +52,9 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
     // Join the above with new tombstones to make complete set without duplicate IDs.
     // In the rare case that an item is taken out of DPLA and put back in multiple times,
     // this ensures that the most recent version of the record is always in the necropolis.
-    val tombstonesWithDups = oldTombs
+    val tombstones = oldTombs
       .join(newTombs, Seq("id"), "leftanti")
       .union(newTombs)
-
-    // If there is more than one "tombstone" (i.e. row) with the same ID,
-    // get only the tombstone with the most recent "lastActive" date.
-    // If there is more than one tombstone with the same lastActive date,
-    // choose one at random.
-    val tombstones = tombstonesWithDups
-      .groupBy("id")
-      .agg(last("lastActive").as("lastActive"))
-      .join(tombstonesWithDups, Seq("id", "lastActive"))
-      .dropDuplicates(Seq("id","lastActive"))
 
     tombstones.write.parquet(newTombsPath)
 
