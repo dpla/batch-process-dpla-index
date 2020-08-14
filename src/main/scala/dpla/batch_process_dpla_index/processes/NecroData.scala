@@ -49,9 +49,11 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val oldTombs = spark.read.parquet(oldTombsPath).distinct
 
     // Get old tombstones whose IDs do not appear in new tombstones.
-    // Join the above with new tombstones to make complete set without duplicate IDs.
+    // Join the above with new tombstones.
     // In the rare case that an item is taken out of DPLA and put back in multiple times,
     // this ensures that the most recent version of the record is always in the necropolis.
+    // Records with duplicate ids may still exist if a single ingest includes duplicate records.
+    // These will be cleaned up at index time.
     val tombstones = oldTombs
       .join(newTombs, Seq("id"), "leftanti")
       .union(newTombs)
