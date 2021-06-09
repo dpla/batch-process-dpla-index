@@ -49,6 +49,10 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                           then 0 else 1 end
                                           as subject,
                                         case
+                                          when size(sourceResource.collection.title) == 0
+                                          then 0 else 1 end
+                                          as collection,
+                                        case
                                           when size(sourceResource.date.displayDate) == 0
                                           then 0 else 1 end
                                           as date,
@@ -93,6 +97,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("language").alias("language"),
         mean("spatial").alias("spatial"),
         mean("subject").alias("subject"),
+        mean("collection").alias("collection"),
         mean("date").alias("date"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
@@ -116,6 +121,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         mean("language").alias("language"),
         mean("spatial").alias("spatial"),
         mean("subject").alias("subject"),
+        mean("collection").alias("collection"),
         mean("date").alias("date"),
         mean("standardizedRights").alias("standardizedRights"),
         mean("preview").alias("preview"),
