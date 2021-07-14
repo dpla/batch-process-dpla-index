@@ -50,6 +50,57 @@ aws emr create-cluster \
     "Jar": "command-runner.jar",
     "Properties": "",
     "Name": "parquet"
+  },
+  {
+    "Args": [
+      "spark-submit",
+      "--deploy-mode",
+      "cluster",
+      "--class",
+      "dpla.batch_process_dpla_index.entries.JsonlDumpEntry",
+      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "'"$jsonl_out"'"
+    ],
+    "Type": "CUSTOM_JAR",
+    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "Jar": "command-runner.jar",
+    "Properties": "",
+    "Name": "jsonl"
+  },
+  {
+    "Args": [
+      "spark-submit",
+      "--deploy-mode",
+      "cluster",
+      "--class",
+      "dpla.batch_process_dpla_index.entries.MqReportsEntry",
+      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "'"$parquet_out"'",
+      "'"$metadata_quality_out"'"
+    ],
+    "Type": "CUSTOM_JAR",
+    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "Jar": "command-runner.jar",
+    "Properties": "",
+    "Name": "mq"
+  },
+  {
+    "Args": [
+      "spark-submit",
+      "--deploy-mode",
+      "cluster",
+      "--class",
+      "dpla.batch_process_dpla_index.entries.SitemapEntry",
+      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "'"$parquet_out"'",
+      "'"$sitemap_out"'",
+      "'"$sitemap_root"'"
+    ],
+    "Type": "CUSTOM_JAR",
+    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "Jar": "command-runner.jar",
+    "Properties": "",
+    "Name": "sitemap"
   }
 ]' \
 --name 'monthlybatch' \
