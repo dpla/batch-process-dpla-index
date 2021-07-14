@@ -9,7 +9,9 @@ import org.apache.spark.sql.SparkSession
   * DPLA Hub Analytics Dashboard.
   *
   * Args
-  *   args(0) = inpath    Local or S3 path to a parquet dump of the DPLA index.
+  *   args(0) = inpath    Local or S3 path to the top-level directory destination of parquet dump of the DPLA index.
+  *                       Month and year will be added to the auto-generated files paths.
+  *                       e.g. s3a://dpla-provider-export/
   *
   *   args(1) = outpath   Local or S3 path to the top-level directory destination.
   *                       Month and year will be added to the auto-generated files paths.

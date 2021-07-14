@@ -11,9 +11,9 @@ sitemap_root="http://sitemaps.dp.la/"
 necropolis_out="s3a://dpla-necropolis/"
 do_necro="true"
 
-# sbt assembly
-# echo "Copying to s3://dpla-monthly-batch/"
-# aws s3 cp ./target/scala-2.11/batch-process-dpla-index-assembly-0.1.jar s3://dpla-monthly-batch/
+sbt assembly
+echo "Copying to s3://dpla-monthly-batch/"
+aws s3 cp ./target/scala-2.11/batch-process-dpla-index-assembly-0.1.jar s3://dpla-monthly-batch/
 
 
 # spin up EMR cluster and run job 
@@ -41,21 +41,15 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.AllProcessesEntry",
+      "dpla.batch_process_dpla_index.entries.ParquetDumpEntry",
       "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
-      "'"$parquet_out"'",
-      "'"$jsonl_out"'",
-      "'"$metadata_quality_out"'",
-      "'"$sitemap_out"'",
-      "'"$sitemap_root"'",
-      "'"$necropolis_out"'",
-      "'"$do_necro"'"
+      "'"$parquet_out"'"
     ],
     "Type": "CUSTOM_JAR",
     "ActionOnFailure": "TERMINATE_CLUSTER",
     "Jar": "command-runner.jar",
     "Properties": "",
-    "Name": "monthlybatch"
+    "Name": "parquet"
   }
 ]' \
 --name 'monthlybatch' \

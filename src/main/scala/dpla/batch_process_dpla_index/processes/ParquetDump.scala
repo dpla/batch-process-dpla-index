@@ -9,7 +9,12 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
 
     val s3write: Boolean = outpath.startsWith("s3")
 
-    val outDirBase: String = outpath.stripSuffix("/") + PathHelper.outDir + "/all.parquet/"
+    val outDirBase: String = PathHelper.parquetPath(outpath)
+
+    if (s3write && s3ObjectExists(outDirBase)) {
+      println(s"Deleting existing keys under $outDirBase")
+      deleteS3Path(outDirBase) // parquet out
+    }
 
     // Read data from ElasticSearch and save as parquet
 

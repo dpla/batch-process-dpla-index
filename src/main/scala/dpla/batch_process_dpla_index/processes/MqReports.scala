@@ -9,9 +9,12 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
   def execute(spark: SparkSession, inpath: String, outpath: String): String = {
 
     val s3write: Boolean = outpath.startsWith("s3")
-    val outDir: String = outpath.stripSuffix("/") + PathHelper.outDir
+    val outDir: String = outpath.stripSuffix("/") + PathHelper.datePath
+    // delete any existing keys with s3 prefix of outDir
+    if(s3write) deleteS3Path(outDir)
 
-    val docs: DataFrame = spark.read.parquet(inpath)
+    val parquetPath = PathHelper.parquetPath(inpath)
+    val docs: DataFrame = spark.read.parquet(parquetPath)
 
     val items = docs.select("doc.*")
 

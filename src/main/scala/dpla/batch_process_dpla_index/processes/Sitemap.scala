@@ -3,7 +3,7 @@ package dpla.batch_process_dpla_index.processes
 import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 
-import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, S3FileHelper}
+import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -21,8 +21,8 @@ object Sitemap extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val dateTime: ZonedDateTime = LocalDateTime.now().atZone(ZoneOffset.UTC)
     val isoTimestamp = dateTime.format(DateTimeFormatter.ISO_INSTANT)
     val dirTimestamp = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-
-    val docs: DataFrame = spark.read.parquet(inpath)
+    val parquetPath = PathHelper.parquetPath(inpath)
+    val docs: DataFrame = spark.read.parquet(parquetPath)
 
     val ids: RDD[String] = docs.select("doc.id").rdd.map{ row => row.getString(0) }
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
@@ -55,7 +55,7 @@ object Sitemap extends S3FileHelper with LocalFileWriter with ManifestWriter {
     // Manifest
 
     val opts: Map[String, String] = Map(
-      "Source" -> inpath,
+      "Source" -> parquetPath,
       "Subfile directory" -> dirTimestamp,
       "Sitemap URL prefix" -> sitemapUrlPrefix,
       "Total URL count" -> id_count.toString,
