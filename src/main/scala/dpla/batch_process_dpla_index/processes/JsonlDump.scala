@@ -18,7 +18,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   def execute(spark: SparkSession, outpath: String): String = {
 
-    val outDirBase: String = outpath.stripSuffix("/") + PathHelper.outDir
+    val outDirBase: String = outpath.stripSuffix("/") + PathHelper.datePath
 
     val allFiles = getS3Keys(s3client.listObjects(inputBucket)).toList
 
@@ -60,6 +60,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
     providerRecords.foreach(x => {
       val outDir = outDirBase + "/" + x.provider + ".jsonl"
 
+      deleteExisting(outDir)
       export(x.records, outDir, x.count)
 
       val manifestOpts: Map[String, String] = Map(
@@ -74,6 +75,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val outDir = s"$outDirBase/all.jsonl"
     val count: Long = providerRecords.map(x => x.count).sum
 
+    deleteExisting(outDir)
     export(allRecords, outDir, count)
 
     val allOpts: Map[String, String] = Map(
@@ -89,6 +91,11 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
     writeManifest(allOpts ++ providerOpts, outDir)
 
     outDir
+  }
+
+  def deleteExisting(outDir: String): Unit = {
+    if(s3ObjectExists(outDir))
+      deleteS3Path(outDir)
   }
 
   def export(data: RDD[String], outDir: String, count: Long): Unit = {
