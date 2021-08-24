@@ -29,6 +29,10 @@ trait S3FileHelper {
     if (keys.isEmpty)
       return
 
+    deleteS3Keys(bucket, keys)
+  }
+
+  def deleteS3Keys(bucket: String, keys: Seq[String]): Unit = {
     val groupedKeys = keys.grouped(1000)
     while(groupedKeys.hasNext) {
       val keyVersions = new util.LinkedList[DeleteObjectsRequest.KeyVersion]
