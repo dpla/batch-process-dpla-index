@@ -10,10 +10,11 @@ assemblyMergeStrategy in assembly := {
 }
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "2.3.2" % "provided",
-  "org.apache.spark" %% "spark-sql" % "2.3.2" % "provided",
+  "org.apache.spark" %% "spark-core" % "2.3.2" % Provided,
+  "org.apache.spark" %% "spark-sql" % "2.3.2" % Provided,
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
   "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
   "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "7.3.2",
-  "com.squareup.okhttp3" % "okhttp" % "3.8.0"
+  "com.squareup.okhttp3" % "okhttp" % "3.8.0",
+  "com.databricks" %% "spark-avro" % "4.0.0"
 )
