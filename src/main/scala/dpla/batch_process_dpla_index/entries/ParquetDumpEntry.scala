@@ -18,7 +18,7 @@ import org.apache.spark.sql.SparkSession
   * A spark-submit invocation requires the following packages:
   *   org.elasticsearch:elasticsearch-spark-20_2.11:7.3.2
   *   com.amazonaws:aws-java-sdk:1.7.4
-  *   org.apache.hadoop:hadoop-aws:2.7.6
+  *   org.apache.hadoop:hadoop-aws:2.7.7
   *
   *   Double-check build file for correct package versions
   */
