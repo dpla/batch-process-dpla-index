@@ -15,7 +15,7 @@ class DplaDataRelation (query: String)
 
   override def schema: StructType = {
     val docType = ScalaReflection.schemaFor[DplaDoc].dataType.asInstanceOf[StructType]
-    val docField = StructField("doc", docType, true)
+    val docField = StructField("doc", docType, nullable = true)
     StructType(Seq(docField))
   }
 
@@ -48,7 +48,22 @@ class DplaDataRelation (query: String)
       val rights = getStringOpt(doc.get("rights"))
       val iiifManifest = getStringOpt(doc.get("iiifManifest"))
 
-      val dataProvider = getStringSeq(doc.get("dataProvider"))
+      // New schema
+      lazy val dataProviderFromObj: Seq[(NamedEntity, Seq[TypeError])] =
+        getNamedEntitySeq(getMapSeq(doc.get("dataProvider")))
+      // Old schema
+      lazy val dataProviderFromString: Seq[(NamedEntity, Seq[TypeError])] = {
+        getStringSeq(doc.get("dataProvider")) match {
+          case Left(_) => Seq()
+          case Right(seq) => seq.map { str =>
+            (NamedEntity(name = Some(str), uri = None, exactMatch = Seq()), Seq())
+          }
+        }
+      }
+      val dataProvider =
+        if (dataProviderFromObj.isEmpty) dataProviderFromString
+        else dataProviderFromObj
+
       val `object` = getStringSeq(doc.get("object"))
       val mediaMaster = getStringSeq(doc.get("mediaMaster"))
 
@@ -59,14 +74,14 @@ class DplaDataRelation (query: String)
       val typeErrors: Seq[TypeError] = Seq(
         hasView.map(z => handleTypeErrorSeq(z._2, "hasView")),
         isPartOf.map(z => handleTypeErrorSeq(z._2, "isPartOf")),
-        preview.map(z => handleTypeErrorSeq(z._2, "preview"))
+        preview.map(z => handleTypeErrorSeq(z._2, "preview")),
+        dataProvider.map(z => handleTypeErrorSeq(z._2, "dataProvider"))
       ).flatten.flatten.union(
         Seq(
           handleTypeErrorSeq(sourceResource._2, "sourceResource"),
           handleTypeErrorSeq(provider.map(_._2).getOrElse(Seq()), "provider")
         ).flatten.union(
           Seq(
-            handleTypeErrorOpt(dataProvider.left.toOption, "dataProvider"),
             handleTypeErrorOpt(intermediateProvider.left.toOption, "intermediateProvider"),
             handleTypeErrorOpt(isShownAt.left.toOption, "isShownAt"),
             handleTypeErrorOpt(`object`.left.toOption, "object"),
@@ -80,7 +95,7 @@ class DplaDataRelation (query: String)
       DplaDoc(
         uri = doc("@id").asInstanceOf[String],
         id = doc("id").asInstanceOf[String],
-        dataProvider = dataProvider.right.getOrElse(Seq()),
+        dataProvider = dataProvider.map(_._1),
         hasView = hasView.map(_._1),
         iiifManifest = iiifManifest.right.getOrElse(None),
         intermediateProvider = intermediateProvider.right.getOrElse(None),
@@ -121,7 +136,7 @@ class DplaDataRelation (query: String)
         case c: Seq[_] => {
           val types = innerSeqTypes(c)
 
-          if (types.size == 1 && types(0) == "String")
+          if (types.size == 1 && types.head == "String")
             // This should not throw exception b/c we just checked that all
             // members of c are Strings.
             Right(c.asInstanceOf[Seq[String]])
@@ -139,15 +154,13 @@ class DplaDataRelation (query: String)
   }
 
   def innerSeqTypes(x: Seq[Any]): Seq[String] = {
-    x.map(a =>
-      a match {
-        case None => "None"
-        case null => "null"
-        case _: String => "String"
-        case _: Seq[_] => "Seq[_]"
-        case _ => "_"
-      }
-    ).distinct.sorted
+    x.map {
+      case None => "None"
+      case null => "null"
+      case _: String => "String"
+      case _: Seq[_] => "Seq[_]"
+      case _ => "_"
+    }.distinct.sorted
   }
 
   def getMapOpt(x: Option[Any]): Option[LinkedHashMap[String, Any]] = {
@@ -179,15 +192,18 @@ class DplaDataRelation (query: String)
   def getNamedEntity(y: LinkedHashMap[String, Any]): (NamedEntity, Seq[TypeError]) = {
     val uri = getStringOpt(y.get("@id"))
     val name= getStringOpt(y.get("name"))
+    val exactMatch = getStringSeq(y.get("exactMatch"))
 
     val namedEntity = NamedEntity(
       uri = uri.right.toOption.flatten,
-      name = name.right.toOption.flatten
+      name = name.right.toOption.flatten,
+      exactMatch = exactMatch.right.getOrElse(Seq())
     )
 
     val typeErrors: Seq[TypeError] = Seq(
       handleTypeErrorOpt(name.left.toOption, "uri"),
-      handleTypeErrorOpt(name.left.toOption, "name")
+      handleTypeErrorOpt(name.left.toOption, "name"),
+      handleTypeErrorOpt(exactMatch.left.toOption, "exactMatch")
     ).flatten
 
     (namedEntity, typeErrors)

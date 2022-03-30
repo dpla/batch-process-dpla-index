@@ -22,7 +22,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
 
     val itemdata = spark.sqlContext.sql("""select id,
                                          provider.name as provider,
-                                         dataProvider as dataProviders,
+                                         dataProvider.name as dataProviders,
                                         case
                                           when size(sourceResource.title) == 0
                                           then 0 else 1 end

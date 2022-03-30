@@ -3,7 +3,7 @@ package dpla.datasource
 case class DplaDoc(
   uri: String, //@id
   id: String,
-  dataProvider: Seq[String],
+  dataProvider: Seq[NamedEntity],
   hasView: Seq[WebResource],
   iiifManifest: Option[String],
   intermediateProvider: Option[String],
@@ -65,7 +65,8 @@ case class Date(
 
 case class NamedEntity(
   uri: Option[String],
-  name: Option[String]
+  name: Option[String],
+  exactMatch: Seq[String]
 )
 
 case class Language(

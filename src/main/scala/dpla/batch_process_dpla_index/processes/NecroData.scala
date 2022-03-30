@@ -32,7 +32,7 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
       .select(
         col("doc.id"),
         col("doc.provider.name").as("provider"),
-        col("doc.dataProvider"),
+        col("doc.dataProvider.name").as("dataProvider"),
         col("doc.intermediateProvider"),
         col("doc.isShownAt"),
         col("doc.object"),
