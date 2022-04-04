@@ -1,7 +1,5 @@
 package dpla.batch_process_dpla_index.helpers
 
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import scala.collection.immutable.SortedMap
 
 trait ManifestWriter {
