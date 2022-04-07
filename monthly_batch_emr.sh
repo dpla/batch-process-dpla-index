@@ -16,7 +16,7 @@ echo "Copying to s3://dpla-monthly-batch/"
 aws s3 cp ./target/scala-2.11/batch-process-dpla-index-assembly-0.1.jar s3://dpla-monthly-batch/
 
 
-# spin up EMR cluster and run job 
+# spin up EMR cluster and run job
 aws emr create-cluster \
 --auto-terminate \
 --auto-scaling-role EMR_AutoScaling_DefaultRole \
@@ -26,7 +26,7 @@ aws emr create-cluster \
   "KeyName": "general",
   "InstanceProfile": "EMR_EC2_DefaultRole",
   "ServiceAccessSecurityGroup": "sg-07459c7a",
-  "SubnetId": "subnet-055a4ce359a29aa76",
+  "SubnetId": "subnet-90afd9ba",
   "EmrManagedSlaveSecurityGroup": "sg-0a459c77",
   "EmrManagedMasterSecurityGroup": "sg-08459c75"
 }' \
@@ -119,7 +119,7 @@ aws emr create-cluster \
       ]
     },
     "InstanceGroupType": "CORE",
-    "InstanceType": "m5.2xlarge",
+    "InstanceType": "m6g.2xlarge",
     "Name": "Core - 2"
   },
   {
@@ -137,7 +137,7 @@ aws emr create-cluster \
       ]
     },
     "InstanceGroupType": "TASK",
-    "InstanceType": "m5.2xlarge",
+    "InstanceType": "m6g.2xlarge",
     "Name": "Task - 3"
   },
   {
@@ -154,7 +154,7 @@ aws emr create-cluster \
       ]
     },
     "InstanceGroupType": "MASTER",
-    "InstanceType": "m5.2xlarge",
+    "InstanceType": "m6g.2xlarge",
     "Name": "Master - 1"
   }
 ]' \
