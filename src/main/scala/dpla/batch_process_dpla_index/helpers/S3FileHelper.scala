@@ -47,7 +47,6 @@ trait S3FileHelper {
     val bucket = getBucket(path)
     val key = getKey(path)
 
-    val s3client: AmazonS3Client = new AmazonS3Client
     val req = new ListObjectsRequest().withBucketName(bucket).withPrefix(key)
     val rsp = s3client.listObjects(req)
     rsp.getObjectSummaries.size() > 0
@@ -59,7 +58,6 @@ trait S3FileHelper {
     val bucket = getBucket(outpath)
 
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
-    val s3client: AmazonS3Client = new AmazonS3Client
     s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
 
     // Return filepath
