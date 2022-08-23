@@ -6,8 +6,8 @@ this_script_name=$0
 parquet_out="s3a://dpla-provider-export/"
 jsonl_out="s3a://dpla-provider-export/"
 metadata_quality_out="s3a://dashboard-analytics/"
-sitemap_out="s3a://sitemaps.dp.la/"
-sitemap_root="http://sitemaps.dp.la/"
+sitemap_out="s3a://sitemaps.dp.la/sitemap/"
+sitemap_root="http://dp.la/sitemap/"
 necropolis_out="s3a://dpla-necropolis/"
 do_necro="true"
 
