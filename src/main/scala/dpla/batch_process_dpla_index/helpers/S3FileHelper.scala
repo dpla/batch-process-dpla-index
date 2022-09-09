@@ -68,7 +68,7 @@ trait S3FileHelper {
   def writeS3Gzip(outpath: String, filename: String, text: String): String = {
 
     val bucket = getBucket(outpath)
-    val key = getKey(outpath) + filename
+    val key = s"${getKey(outpath)}/$filename"
 
     // compress
     val outStream = new ByteArrayOutputStream
