@@ -56,7 +56,7 @@ trait S3FileHelper {
 
     // bucket should have neither protocol nor trailing slash
     val bucket = getBucket(outpath)
-    val key = getKey(outpath) + filename
+    val key = s"${getKey(outpath)}/$filename"
 
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
     s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
