@@ -52,10 +52,11 @@ trait S3FileHelper {
     rsp.getObjectSummaries.size() > 0
   }
 
-  def writeS3(outpath: String, key: String, text: String): String = {
+  def writeS3(outpath: String, filename: String, text: String): String = {
 
     // bucket should have neither protocol nor trailing slash
     val bucket = getBucket(outpath)
+    val key = s"${getKey(outpath)}/$filename"
 
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
     s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
@@ -64,9 +65,10 @@ trait S3FileHelper {
     s"$bucket/$key"
   }
 
-  def writeS3Gzip(outpath: String, key: String, text: String): String = {
+  def writeS3Gzip(outpath: String, filename: String, text: String): String = {
 
     val bucket = getBucket(outpath)
+    val key = s"${getKey(outpath)}/$filename"
 
     // compress
     val outStream = new ByteArrayOutputStream
