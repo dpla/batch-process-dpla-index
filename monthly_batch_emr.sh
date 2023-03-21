@@ -30,10 +30,11 @@ aws emr create-cluster \
   "EmrManagedSlaveSecurityGroup": "sg-0a459c77",
   "EmrManagedMasterSecurityGroup": "sg-08459c75"
 }' \
---service-role EMR_DefaultRole \
+--service-role EMR_Default_Role_v2 \
 --enable-debugging \
---release-label emr-5.32.0 \
+--release-label emr-5.36.0 \
 --log-uri 's3n://aws-logs-283408157088-us-east-1/elasticmapreduce/' \
+--tags for-use-with-amazon-emr-managed-policies=true \
 --steps '[
   {
     "Args": [
