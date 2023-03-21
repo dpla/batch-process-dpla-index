@@ -24,7 +24,7 @@ aws emr create-cluster \
 --ebs-root-volume-size 100 \
 --ec2-attributes '{
   "KeyName": "general",
-  "InstanceProfile": "EMR_EC2_DefaultRole",
+  "InstanceProfile": "sparkindexer-s3",
   "ServiceAccessSecurityGroup": "sg-07459c7a",
   "SubnetId": "subnet-90afd9ba",
   "EmrManagedSlaveSecurityGroup": "sg-0a459c77",
