@@ -23,17 +23,18 @@ aws emr create-cluster \
 --applications Name=Hadoop Name=Hive Name=Pig Name=Hue Name=Spark \
 --ebs-root-volume-size 100 \
 --ec2-attributes '{
-  "KeyName": "general",
-  "InstanceProfile": "EMR_EC2_DefaultRole",
-  "ServiceAccessSecurityGroup": "sg-07459c7a",
-  "SubnetId": "subnet-90afd9ba",
+  "EmrManagedMasterSecurityGroup": "sg-08459c75",
   "EmrManagedSlaveSecurityGroup": "sg-0a459c77",
-  "EmrManagedMasterSecurityGroup": "sg-08459c75"
+  "InstanceProfile": "sparkindexer-s3",
+  "KeyName": "general",
+  "ServiceAccessSecurityGroup": "sg-07459c7a",
+  "SubnetId": "subnet-90afd9ba"
 }' \
---service-role EMR_DefaultRole \
+--service-role EMR_Default_Role_v2 \
 --enable-debugging \
---release-label emr-5.32.0 \
+--release-label emr-5.36.0 \
 --log-uri 's3n://aws-logs-283408157088-us-east-1/elasticmapreduce/' \
+--tags for-use-with-amazon-emr-managed-policies=true \
 --steps '[
   {
     "Args": [
