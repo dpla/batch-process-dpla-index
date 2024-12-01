@@ -14,10 +14,11 @@ do_necro="true"
 sbt assembly
 echo "Copying to s3://dpla-monthly-batch/"
 aws s3 cp ./target/scala-2.11/batch-process-dpla-index-assembly-0.1.jar s3://dpla-monthly-batch/
-
+aws s3 cp cluster-config.json s3://dpla-monthly-batch/
 
 # spin up EMR cluster and run job
 aws emr create-cluster \
+--configurations file://./cluster-config.json \
 --auto-terminate \
 --auto-scaling-role EMR_AutoScaling_DefaultRole \
 --applications Name=Hadoop Name=Hive Name=Pig Name=Hue Name=Spark \
