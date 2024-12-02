@@ -14,14 +14,13 @@ do_necro="true"
 sbt assembly
 echo "Copying to s3://dpla-monthly-batch/"
 aws s3 cp ./target/scala-2.11/batch-process-dpla-index-assembly-0.1.jar s3://dpla-monthly-batch/
-aws s3 cp cluster-config.json s3://dpla-monthly-batch/
 
 # spin up EMR cluster and run job
 aws emr create-cluster \
 --configurations file://./cluster-config.json \
 --auto-terminate \
 --auto-scaling-role EMR_AutoScaling_DefaultRole \
---applications Name=Hadoop Name=Hive Name=Pig Name=Hue Name=Spark \
+--applications Name=Hadoop Name=Hive Name=Spark \
 --ebs-root-volume-size 100 \
 --ec2-attributes '{
   "EmrManagedMasterSecurityGroup": "sg-08459c75",
@@ -121,7 +120,7 @@ aws emr create-cluster \
       ]
     },
     "InstanceGroupType": "CORE",
-    "InstanceType": "m6g.2xlarge",
+    "InstanceType": "r6g.xlarge",
     "Name": "Core - 2"
   },
   {
@@ -139,7 +138,7 @@ aws emr create-cluster \
       ]
     },
     "InstanceGroupType": "TASK",
-    "InstanceType": "m6g.2xlarge",
+    "InstanceType": "r6g.xlarge",
     "Name": "Task - 3"
   },
   {
@@ -156,7 +155,7 @@ aws emr create-cluster \
       ]
     },
     "InstanceGroupType": "MASTER",
-    "InstanceType": "m6g.2xlarge",
+    "InstanceType": "m6g.xlarge",
     "Name": "Master - 1"
   }
 ]' \
