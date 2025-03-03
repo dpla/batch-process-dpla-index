@@ -10,10 +10,10 @@ import org.apache.spark.sql.SparkSession
   * Args
   *   args(0) = outpath         Local or S3 path to the top-level directory destination.
   *                             Month and year will be added to the auto-generated file paths.
-  *                             e.g. s3a://dpla-necropolis/
+  *                             e.g. s3://dpla-necropolis/
   *
   *   args(1) = newRecordsPath  Local or S3 path to the parquet file of records.
-  *                             e.g. s3a://dpla-provider-export/2020/05/all.parquet
+  *                             e.g. s3://dpla-provider-export/2020/05/all.parquet
   *
   *   args(2) = previousDate    Optional
   *                             Date of the previous tombstones / item dataset for comparison with newRecordsPath

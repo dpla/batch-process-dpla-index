@@ -1,6 +1,5 @@
 package dpla.batch_process_dpla_index.processes
 
-import com.databricks.spark.avro._
 import dpla.batch_process_dpla_index.helpers.S3FileHelper
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, SparkSession}
@@ -9,7 +8,7 @@ object ThumbnailPurge extends S3FileHelper {
 
   def execute(spark: SparkSession, input: String): String = {
 
-    val df = spark.read.avro(input)
+    val df = spark.read.format("avro").load(input)
 
     val thumbnailBucket = "dpla-thumbnails"
     df.createOrReplaceTempView("df")
@@ -24,12 +23,11 @@ object ThumbnailPurge extends S3FileHelper {
 
      deleteS3Keys(thumbnailBucket, thumbnailKeys)
 
-     s"Deleted ${thumbnailKeys.size} thumbnails"
+     s"Deleted ${thumbnailKeys.length} thumbnails"
   }
 
-  def thumbnailPrefix(id: String): String = {
+  def thumbnailPrefix(id: String): String =
     s"${id(0)}/${id(1)}/${id(2)}/${id(3)}/$id.jpg"
-  }
 
   def take(col: Column, n: Int): Column = {
     assert(n >= 0)

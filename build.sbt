@@ -2,19 +2,21 @@ name := "batch-process-dpla-index"
 
 version := "0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.20"
 
 assemblyMergeStrategy in assembly := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard
   case x => MergeStrategy.first
 }
 
+val SPARK_VERSION = "3.3.1"
+
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "2.3.2" % Provided,
-  "org.apache.spark" %% "spark-sql" % "2.3.2" % Provided,
-  "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-  "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
-  "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "7.3.2",
-  "com.squareup.okhttp3" % "okhttp" % "3.8.0",
-  "com.databricks" %% "spark-avro" % "4.0.0"
+  "org.apache.spark" %% "spark-core" % SPARK_VERSION % Provided,
+  "org.apache.spark" %% "spark-sql" % SPARK_VERSION % Provided,
+  "com.amazonaws" % "aws-java-sdk" % "1.12.397" % Provided,
+  //"org.apache.hadoop" % "hadoop-aws" % "2.10.1",
+  "org.elasticsearch" %% "elasticsearch-spark-20" % "7.12.1",
+  "com.squareup.okhttp3" % "okhttp" % "4.12.0",
+  "org.apache.spark" %% "spark-avro" % "3.5.5"
 )

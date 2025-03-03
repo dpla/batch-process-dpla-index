@@ -18,7 +18,7 @@ object NecroData extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val date: String = newDataPath.stripSuffix("/").stripSuffix("/all.parquet").split("/").takeRight(2).mkString("/")
     val lastDate: String = previousDate.getOrElse(getLastDate(date))
 
-    val oldDataPath: String = s"s3a://dpla-provider-export/$lastDate/all.parquet/"
+    val oldDataPath: String = s"s3://dpla-provider-export/$lastDate/all.parquet/"
     val newTombsPath: String = outpath.stripSuffix("/") + "/" + date + "/tombstones.parquet/"
     val oldTombsPath: String = outpath.stripSuffix("/") + "/" + lastDate + "/tombstones.parquet/"
 

@@ -12,7 +12,7 @@ import org.apache.spark.sql.SparkSession
   * Args
   *   args(0) = outpath   Local or S3 path to the top-level directory destination.
   *                       Month and year will be added to the auto-generated file paths.
-  *                       e.g. s3a://dpla-provider-export/
+  *                       e.g. s3://dpla-provider-export/
   *
   * A spark-submit invocation requires the following packages:
   *   com.amazonaws:aws-java-sdk:1.7.4

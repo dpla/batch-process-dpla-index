@@ -10,7 +10,7 @@ import org.apache.spark.sql.SparkSession
   * Args
   *   args(0) = outpath   Local or S3 path to the top-level directory destination.
   * *                     Month and year will be added to the auto-generated file paths.
-  * *                     e.g. s3a://dpla-provider-export/
+  * *                     e.g. s3://dpla-provider-export/
   * *
   *   args(1) = query     Optional parameters for an ElasticSearch query,
   *                       e.g. ?q=hamster

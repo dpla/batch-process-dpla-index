@@ -3,12 +3,12 @@
 this_script_name=$0
 
 # Hard code values for spark job
-parquet_out="s3a://dpla-provider-export/"
-jsonl_out="s3a://dpla-provider-export/"
-metadata_quality_out="s3a://dashboard-analytics/"
-sitemap_out="s3a://sitemaps.dp.la/sitemap/"
+parquet_out="s3://dpla-provider-export/"
+jsonl_out="s3://dpla-provider-export/"
+metadata_quality_out="s3://dashboard-analytics/"
+sitemap_out="s3://sitemaps.dp.la/sitemap/"
 sitemap_root="https://dp.la/sitemap/"
-necropolis_out="s3a://dpla-necropolis/"
+necropolis_out="s3://dpla-necropolis/"
 do_necro="true"
 
 sbt assembly
@@ -32,8 +32,8 @@ aws emr create-cluster \
 }' \
 --service-role EMR_Default_Role_v2 \
 --enable-debugging \
---release-label emr-5.36.0 \
---log-uri 's3n://aws-logs-283408157088-us-east-1/elasticmapreduce/' \
+--release-label emr-6.10.0 \
+--log-uri 's3://aws-logs-283408157088-us-east-1/elasticmapreduce/' \
 --tags for-use-with-amazon-emr-managed-policies=true \
 --steps '[
   {
@@ -107,38 +107,38 @@ aws emr create-cluster \
 --name 'monthlybatch' \
 --instance-groups '[
   {
-    "InstanceCount": 7,
+    "InstanceCount": 6,
     "EbsConfiguration": {
       "EbsBlockDeviceConfigs": [
         {
           "VolumeSpecification": {
             "SizeInGB": 250,
-            "VolumeType": "gp2"
+            "VolumeType": "gp3"
           },
           "VolumesPerInstance": 2
         }
       ]
     },
     "InstanceGroupType": "CORE",
-    "InstanceType": "r6g.xlarge",
+    "InstanceType": "r7g.xlarge",
     "Name": "Core - 2"
   },
   {
-    "InstanceCount": 8,
+    "InstanceCount": 6,
     "BidPrice": "OnDemandPrice",
     "EbsConfiguration": {
       "EbsBlockDeviceConfigs": [
         {
           "VolumeSpecification": {
             "SizeInGB": 250,
-            "VolumeType": "gp2"
+            "VolumeType": "gp3"
           },
           "VolumesPerInstance": 2
         }
       ]
     },
     "InstanceGroupType": "TASK",
-    "InstanceType": "r6g.xlarge",
+    "InstanceType": "r7g.xlarge",
     "Name": "Task - 3"
   },
   {
@@ -148,14 +148,14 @@ aws emr create-cluster \
         {
           "VolumeSpecification": {
             "SizeInGB": 32,
-            "VolumeType": "gp2"
+            "VolumeType": "gp3"
           },
           "VolumesPerInstance": 2
         }
       ]
     },
     "InstanceGroupType": "MASTER",
-    "InstanceType": "m6g.xlarge",
+    "InstanceType": "m7g.xlarge",
     "Name": "Master - 1"
   }
 ]' \

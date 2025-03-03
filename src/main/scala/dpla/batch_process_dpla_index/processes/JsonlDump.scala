@@ -35,7 +35,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val directories = for {
       group <- paths.groupBy(x => x._1)
       last = group._2.max
-    } yield (group._1, "s3a://" + inputBucket + "/" + group._1 + "/jsonl/" + last._2 + "/")
+    } yield (group._1, "s3://" + inputBucket + "/" + group._1 + "/jsonl/" + last._2 + "/")
 
     import spark.implicits._
 

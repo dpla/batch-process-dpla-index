@@ -10,25 +10,25 @@ import org.apache.spark.sql.SparkSession
   * Args
   *   args(0) = parquetOut    Local or S3 path to the top-level directory destination.
   * *                         Month and year will be added to the auto-generated file paths.
-  * *                         e.g. s3a://dpla-provider-export/
+  * *                         e.g. s3://dpla-provider-export/
   * *
   *   args(1) = jsonlOut      Local or S3 path to the top-level directory destination.
   *                           Month and year will be added to the auto-generated file paths.
-  *                           e.g. s3a://dpla-provider-export/
+  *                           e.g. s3://dpla-provider-export/
   *
   *   args(2) = mqOut         Local or S3 path to the top-level directory destination.
   *                           Month and year will be added to the auto-generated files paths.
-  *                           e.g. s3a://dashboard-analytics/
+  *                           e.g. s3://dashboard-analytics/
   *
   *   args(3) = sitemapOut    Local or S3 output path to the top-level directory.
   *                           Date/timestamps will be added to the auto-generated file paths.
-  *                           e.g. s3a://sitemaps.dp.la/
+  *                           e.g. s3://sitemaps.dp.la/
   *
   *   args(4) = sitemapUrlPrefix   e.g. http://sitemaps.dp.la/
   *
   *   args(5) = tombstoneOut  Local or S3 output path to the top-level directory destination.
   *                           Month and year will be added to the auto-generated files paths.
-  *                           e.g. s3a://dpla-necropolis/
+  *                           e.g. s3://dpla-necropolis/
   *
   *   args(6) = doNecro       Boolean, default is false.
   *                           Set to true if you want to compute necropolis data and index to search.internal.dp.la

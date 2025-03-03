@@ -11,11 +11,11 @@ import org.apache.spark.sql.SparkSession
   * Args
   *   args(0) = inpath    Local or S3 path to the top-level directory destination of parquet dump of the DPLA index.
   *                       Month and year will be added to the auto-generated files paths.
-  *                       e.g. s3a://dpla-provider-export/
+  *                       e.g. s3://dpla-provider-export/
   *
   *   args(1) = outpath   Local or S3 output path to the top-level directory.
   *                       Date/timestamps will be added to the auto-generated file paths.
-  *                       e.g. s3a://sitemaps.dp.la/
+  *                       e.g. s3://sitemaps.dp.la/
   *
   *   args(2) = sitemapUrlPrefix   e.g. http://sitemaps.dp.la/
   *
