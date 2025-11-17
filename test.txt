@@ -1,0 +1,1 @@
+s3a://dpla-master-dataset/artstor/enrichment/20220809_083150-artstor-MAP4_0.EnrichRecord.avro/ failed bc of org.apache.spark.sql.AnalysisException: [INVALID_EXTRACT_BASE_FIELD_TYPE] Can't extract a value from "dplaUri". Need a complex type [STRUCT, ARRAY, MAP] but got "STRING".:

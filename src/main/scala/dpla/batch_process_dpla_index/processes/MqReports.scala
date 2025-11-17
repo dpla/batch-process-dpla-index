@@ -1,6 +1,7 @@
 package dpla.batch_process_dpla_index.processes
 
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 
@@ -161,5 +162,14 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
 
     // return outpath
     outDir
+  }
+
+  def main(args: Array[String]): Unit = {
+    val inPath = args(0)
+    val outPath = args(1)
+    val conf = new SparkConf().setAppName("Batch process DPLA index: MQ Reports")
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    MqReports.execute(spark, inPath, outPath)
+    spark.stop()
   }
 }

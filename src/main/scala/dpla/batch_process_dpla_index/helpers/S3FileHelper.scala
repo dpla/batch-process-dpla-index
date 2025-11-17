@@ -3,38 +3,49 @@ package dpla.batch_process_dpla_index.helpers
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util
 import java.util.zip.GZIPOutputStream
-
-import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3Client}
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion
 import com.amazonaws.services.s3.model._
 
 import scala.annotation.tailrec
-import scala.collection.JavaConversions._
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 
 trait S3FileHelper {
-  lazy val s3client: AmazonS3Client = new AmazonS3Client
+
+  private val MAX_ROWS: Int = 2000000
+
+  lazy val s3client: AmazonS3 = AmazonS3Client.builder().build()
+
+  def getLatestMasterDatasetPathsForType(inputBucket: String, dataType: String): Map[String, String] = {
+    val listHubFolders = new ListObjectsRequest(inputBucket, "", "", "/", MAX_ROWS)
+    val hubsListObjectsResult = s3client.listObjects(listHubFolders)
+    val results = for {
+      hubFolder <- hubsListObjectsResult.getCommonPrefixes.toSeq
+      subFoldersRequest = new ListObjectsRequest(inputBucket, hubFolder + dataType + "/", "", "/", MAX_ROWS)
+      subFoldersResult = s3client.listObjects(subFoldersRequest)
+      dataTypeFolder <- subFoldersResult.getCommonPrefixes.toSeq.sorted.lastOption
+    } yield Tuple2(hubFolder, "s3a://" + inputBucket + "/" + dataTypeFolder)
+
+    results.toMap
+  }
 
   def getBucket(path: String): String = path.split("://")(1).split("/")(0)
+
   def getKey(path: String): String = path.split("://")(1).split("/").drop(1).mkString("/")
 
   def deleteS3Path(path: String): Unit = {
-    val bucket = getBucket(path)
-    val key = getKey(path)
 
-    val listObjectsRequest = new ListObjectsRequest().withBucketName(bucket).withPrefix(key)
-    val listObjectsResponse = s3client.listObjects(listObjectsRequest)
+    val listObjectsResponse = list(path)
     val keys = getS3Keys(listObjectsResponse)
 
-    if (keys.isEmpty)
-      return
-
-    deleteS3Keys(bucket, keys)
+    if (keys.nonEmpty)
+      deleteS3Keys(getBucket(path), keys)
   }
 
   def deleteS3Keys(bucket: String, keys: Seq[String]): Unit = {
     val groupedKeys = keys.grouped(1000)
-    while(groupedKeys.hasNext) {
+    while (groupedKeys.hasNext) {
       val keyVersions = new util.LinkedList[DeleteObjectsRequest.KeyVersion]
       val group = groupedKeys.next()
       group.map(key => keyVersions.add(new KeyVersion(key)))
@@ -43,20 +54,17 @@ trait S3FileHelper {
     }
   }
 
-  def s3ObjectExists(path: String): Boolean = {
-    val bucket = getBucket(path)
-    val key = getKey(path)
 
-    val req = new ListObjectsRequest().withBucketName(bucket).withPrefix(key)
-    val rsp = s3client.listObjects(req)
+  def s3ObjectExists(path: String): Boolean = {
+    val rsp = list(path)
     rsp.getObjectSummaries.size() > 0
   }
 
-  def writeS3(outpath: String, filename: String, text: String): String = {
+  def writeS3(outPath: String, filename: String, text: String): String = {
 
     // bucket should have neither protocol nor trailing slash
-    val bucket = getBucket(outpath)
-    val key = s"${getKey(outpath)}/$filename"
+    val bucket = getBucket(outPath)
+    val key = s"${getKey(outPath)}/$filename"
 
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
     s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
@@ -65,10 +73,10 @@ trait S3FileHelper {
     s"$bucket/$key"
   }
 
-  def writeS3Gzip(outpath: String, filename: String, text: String): String = {
+  def writeS3Gzip(outPath: String, filename: String, text: String): String = {
 
-    val bucket = getBucket(outpath)
-    val key = s"${getKey(outpath)}/$filename"
+    val bucket = getBucket(outPath)
+    val key = s"${getKey(outPath)}/$filename"
 
     // compress
     val outStream = new ByteArrayOutputStream
@@ -94,4 +102,13 @@ trait S3FileHelper {
     if (!objects.isTruncated) files
     else getS3Keys(s3client.listNextBatchOfObjects(objects), files)
   }
+
+  private[this] def list(path: String): ObjectListing = {
+    val bucket = getBucket(path)
+    val key = getKey(path)
+
+    val req = new ListObjectsRequest().withBucketName(bucket).withPrefix(key)
+    s3client.listObjects(req)
+  }
+
 }
