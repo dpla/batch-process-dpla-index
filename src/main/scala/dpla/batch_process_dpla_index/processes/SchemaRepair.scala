@@ -1,203 +1,131 @@
 package dpla.batch_process_dpla_index.processes
 
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Column, SaveMode, SparkSession}
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 
 object SchemaRepair {
-  import org.apache.spark.sql.DataFrame
-  import org.apache.spark.sql.functions._
 
-  val jobName = "Avro Schema Repair"
+  private val jobName = "Avro Schema Repair"
+
+  /*
+
+  NB: ESDN's data did not have the iiifManifest nor mediaMaster fields,
+  so I had to manually add them with a spark-shell command like:
+
+   res0
+    .withColumn("iiifManifest", lit(null).cast("struct<value:string>"))
+    .withColumn("mediaMaster", array().cast("array<struct<uri:struct<value:string>,fileFormat:array<string>,dcRights:array<string>,edmRights:string,isReferencedBy:struct<value:string>>>"))
+    .write.format("avro").save("fixed2")
+
+   ... before running this class on it. I feel like a wizard now.
+
+   */
 
   def main(args: Array[String]): Unit = {
     val inDfPath = args(0)
     val outDfPath = args(1)
-
     val conf = new SparkConf().setAppName(jobName)
-    val spark = SparkSession.builder().master("local[4]").config(conf).getOrCreate()
+    val spark = SparkSession.builder().config(conf).getOrCreate()
     val inDf = spark.read.format("avro").load(inDfPath)
-    fixSchema(inDf).write.format("avro").save(outDfPath)
+    val outDf = fixSchema(inDf)
+    outDf.write.format("avro").save(outDfPath)
   }
 
-  def fixSchema(df: DataFrame): DataFrame = {
+  private def toValueField(colName: String): Column =
+    struct(col(colName).as("value")).as(colName)
 
-    // Helper function to wrap a string column into a struct { value: ... }
-    // Handles null safety automatically in Spark SQL expressions
-    def wrap(colName: String) = struct(col(colName).as("value"))
+  private def transformAgent(col: Column): Column = {
+    struct(
+      struct(col.getField("uri").as("value")).as("uri"),
+      col.getField("name").as("name"),
+      col.getField("providedLabel").as("providedLabel"),
+      col.getField("note").as("note"),
+      struct(col("scheme").as("value")).as("scheme"),
+      transform(col.getField("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
+      transform(col.getField("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
+    )
+  }
 
-    // Helper to transform generic agent arrays (contributor, creator, publisher, etc.)
-    // These all require wrapping 'uri' and 'scheme' and 'exactMatch'
-    def transformAgent(colName: String) = {
-      transform(col(colName), c => struct(
-        // Keep existing fields that don't change
-        c("name").as("name"),
-        c("providedLabel").as("providedLabel"),
-        c("note").as("note"),
+  private def transformArray(colName: String, function: Column => Column): Column =
+    transform(col(colName), c => function(c))
 
-        // Wrap specific fields from String -> Struct
-        struct(c("uri").as("value")).as("uri"),
-        struct(c("scheme").as("value")).as("scheme"),
+  private def transformWebResource(col: Column): Column =
+    struct(
+      struct(col.getField("uri").as("value")).as("uri"),
+      col.getField("fileFormat").as("fileFormat"),
+      col.getField("dcRights").as("dcRights"),
+      col.getField("edmRights").as("edmRights"),
+      lit(null).cast("struct<value:string>").as("isReferencedBy"),
+    )
 
-        // Transform Arrays of Strings -> Arrays of Structs
-        transform(c("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-        transform(c("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-      ))
-    }
+  private def transformDcmiTypeCollection(origCol: Column): Column =
+    struct(
+      origCol.getField("title"),
+      origCol.getField("description"),
+      lit(null)
+        .cast("struct<uri:struct<value:string>,fileFormat:array<string>,dcRights:array<string>,edmRights:string,isReferencedBy:struct<value:string>>")
+        .as("isShownAt"),
+    )
 
-    // Helper to transform WebResources (isShownAt, object, preview, etc.)
-    // Wraps 'uri' and adds empty 'isReferencedBy' if missing
-    def transformWebResource(colName: String) = {
-      struct(
-        struct(col(s"$colName.uri").as("value")).as("uri"),
-        col(s"$colName.fileFormat").as("fileFormat"),
-        col(s"$colName.dcRights").as("dcRights"),
-        col(s"$colName.edmRights").as("edmRights"),
-        // Add missing field as null/empty to match correct schema
-        lit(null).cast("struct<value:string>").as("isReferencedBy")
-      )
-    }
+  private def transformSkosConcept(origCol: Column): Column =
+    struct(
+      origCol.getField("concept"),
+      origCol.getField("providedLabel"),
+      origCol.getField("note"),
+      struct(origCol.getField("scheme").as("value")).as("scheme"),
+      transform(origCol.getField("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
+      transform(origCol.getField("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
+    )
+
+  private def transformDplaPlace(): Column = transform(
+    col("SourceResource.place"),
+    place => place.withField("exactMatch", array(lit(null).cast("struct<value:string>")))
+  )
+
+  private def fixSchema(df: DataFrame): DataFrame = {
 
     df.select(
-      // 1. Root Level Wrappers
-      wrap("dplaUri").as("dplaUri"),
-
-      // 2. Rebuild SourceResource (Renamed from SourceResource)
+      toValueField("dplaUri"),
       struct(
         col("SourceResource.alternateTitle"),
-        col("SourceResource.collection"),
-        col("SourceResource.title"),
-
-        // Transform Agents [cite: 5, 108]
-        transformAgent("SourceResource.contributor").as("contributor"),
-        transformAgent("SourceResource.creator").as("creator"),
-
+        transformArray("SourceResource.collection", transformDcmiTypeCollection).as("collection"),
+        transformArray("SourceResource.contributor", transformAgent).as("contributor"),
+        transformArray("SourceResource.creator", transformAgent).as("creator"),
         col("SourceResource.date"),
         col("SourceResource.description"),
         col("SourceResource.extent"),
         col("SourceResource.format"),
-
-        // Fix Genre (wrap scheme) [cite: 24, 132]
-        transform(col("SourceResource.genre"), g => struct(
-          g("concept"),
-          g("providedLabel"),
-          g("note"),
-          struct(g("scheme").as("value")).as("scheme"),
-          transform(g("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-          transform(g("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-        )).as("genre"),
-
+        transformArray("SourceResource.genre", transformSkosConcept).as("genre"),
         col("SourceResource.identifier"),
-
-        // Fix Language (wrap scheme) [cite: 30, 139]
-        transform(col("SourceResource.language"), l => struct(
-          l("concept"),
-          l("providedLabel"),
-          l("note"),
-          struct(l("scheme").as("value")).as("scheme"),
-          transform(l("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-          transform(l("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-        )).as("language"),
-
-        // 3. Flatten Place Hierarchy
-        transform(col("SourceResource.place"), p => struct(
-          p("name"),
-          p("city"),
-          // Assuming original 'county' and 'state' were structs holding the nested data
-          p("county").cast("string").as("county"),
-          p("county.region").as("region"), // Extract nested region
-          p("state").cast("string").as("state"),
-          p("state.country").as("country"), // Extract nested country
-          p("coordinates"),
-          // Add exactMatch arrays if missing in source but present in target
-          lit(null).cast("array<struct<value:string>>").as("exactMatch")
-        )).as("place"),
-
-        transformAgent("SourceResource.publisher").as("publisher"),
+        transformArray("SourceResource.language", transformSkosConcept).as("language"),
+        transformDplaPlace().as("place"),
+        transformArray("SourceResource.publisher", transformAgent).as("publisher"),
         col("SourceResource.relation"),
         col("SourceResource.replacedBy"),
         col("SourceResource.replaces"),
         col("SourceResource.rights"),
-
-        // Fix RightsHolder (wrap uri/scheme) [cite: 49, 163]
-        transform(col("SourceResource.rightsHolder"), r => struct(
-          r("name"),
-          r("note"),
-          struct(r("uri").as("value")).as("uri"),
-          struct(r("scheme").as("value")).as("scheme"),
-          transform(r("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-          transform(r("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-        )).as("rightsHolder"),
-
-        // Fix Subject (wrap scheme) [cite: 56, 172]
-        transform(col("SourceResource.subject"), s => struct(
-          s("concept"),
-          s("providedLabel"),
-          s("note"),
-          struct(s("scheme").as("value")).as("scheme"),
-          transform(s("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-          transform(s("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-        )).as("subject"),
-
+        transformArray("SourceResource.rightsHolder", transformAgent).as("rightsHolder"),
+        transformArray("SourceResource.subject", transformSkosConcept).as("subject"),
         col("SourceResource.temporal"),
+        col("SourceResource.title"),
         col("SourceResource.type")
       ).as("sourceResource"),
-
-      // 4. Transform Providers [cite: 63, 181]
-      struct(
-        struct(col("dataProvider.uri").as("value")).as("uri"),
-        col("dataProvider.name"),
-        col("dataProvider.providedLabel"),
-        col("dataProvider.note"),
-        struct(col("dataProvider.scheme").as("value")).as("scheme"),
-        transform(col("dataProvider.exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-        transform(col("dataProvider.closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-      ).as("dataProvider"),
-
+      transformAgent(col("dataProvider")).as("dataProvider"),
       col("originalRecord"),
-
-      // 5. Transform Views/Objects [cite: 76, 200]
-      transform(col("hasView"), v => struct(
-        struct(v("uri").as("value")).as("uri"),
-        v("fileFormat"),
-        v("dcRights"),
-        v("edmRights"),
-        lit(null).cast("struct<value:string>").as("isReferencedBy")
-      )).as("hasView"),
-
-      struct(
-        struct(col("intermediateProvider.uri").as("value")).as("uri"),
-        col("intermediateProvider.name"),
-        col("intermediateProvider.providedLabel"),
-        col("intermediateProvider.note"),
-        struct(col("intermediateProvider.scheme").as("value")).as("scheme"),
-        transform(col("intermediateProvider.exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-        transform(col("intermediateProvider.closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-      ).as("intermediateProvider"),
-
-      transformWebResource("isShownAt").as("isShownAt"),
-      transformWebResource("object").as("object"),
-      transformWebResource("preview").as("preview"),
-
-      struct(
-        struct(col("provider.uri").as("value")).as("uri"),
-        col("provider.name"),
-        col("provider.providedLabel"),
-        col("provider.note"),
-        struct(col("provider.scheme").as("value")).as("scheme"),
-        transform(col("provider.exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
-        transform(col("provider.closeMatch"), x => struct(x.as("value"))).as("closeMatch")
-      ).as("provider"),
-
-      wrap("edmRights").as("edmRights"),
+      transformArray("hasView", transformWebResource).as("hasView"),
+      transformAgent(col("intermediateProvider")).as("intermediateProvider"),
+      transformWebResource(col("isShownAt")).as("isShownAt"),
+      transformWebResource(col("object")).as("object"),
+      transformWebResource(col("preview")).as("preview"),
+      transformAgent(col("provider")).as("provider"),
+      toValueField("edmRights"),
       col("sidecar"),
       col("messages"),
       col("originalId"),
-
-      // 6. Fix tags (Array[String] -> Array[Struct])
       transform(col("tags"), t => struct(t.as("value"))).as("tags"),
-
-      wrap("iiifManifest").as("iiifManifest"),
-
+      toValueField("iiifManifest").as("iiifManifest"),
       transform(col("mediaMaster"), m => struct(
         struct(m("uri").as("value")).as("uri"),
         m("fileFormat"),

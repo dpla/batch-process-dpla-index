@@ -7,7 +7,6 @@ scalaVersion := "2.12.18"
 organization := "dpla"
 
 assembly / assemblyJarName := "batch-process-dpla-index-assembly.jar"
-assembly / mainClass := Some("dpla.batch_process_dpla_index.processes.AllProcessesEntry")
 
 assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) =>
