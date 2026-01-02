@@ -4,15 +4,19 @@ set -euxo pipefail
 
 
 # Hard code values for spark job
+master_dataset_bucket="dpla-master-dataset"
 parquet_out="s3a://dpla-provider-export/"
 jsonl_out="s3a://dpla-provider-export/"
 metadata_quality_out="s3a://dashboard-analytics/"
 sitemap_out="s3a://sitemaps.dp.la/sitemap/"
 sitemap_root="https://dp.la/sitemap/"
+jar_name="batch-process-dpla-index-assembly.jar"
+jar_bucket="s3://dpla-monthly-batch/"
+jar_path="${jar_bucket}${jar_name}"
 
 sbt assembly
-echo "Copying to s3://dpla-monthly-batch/"
-aws s3 cp ./target/scala-2.12/batch-process-dpla-index-assembly.jar s3://dpla-monthly-batch/
+echo "Copying to ${jar_bucket}"
+aws s3 cp ./target/scala-2.12/${jar_name} $jar_bucket
 
 # spin up EMR cluster and run job
 aws emr create-cluster \
@@ -41,12 +45,13 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.ParquetDumpEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly.jar",
+      "dpla.batch_process_dpla_index.processes.ParquetDump",
+      "'"$jar_path"'",
+      "'"$master_dataset_bucket"'",
       "'"$parquet_out"'"
     ],
     "Type": "CUSTOM_JAR",
-    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "ActionOnFailure": "CANCEL_AND_WAIT",
     "Jar": "command-runner.jar",
     "Properties": "",
     "Name": "parquet"
@@ -57,8 +62,9 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.JsonlDumpEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly.jar",
+      "dpla.batch_process_dpla_index.processes.JsonlDump",
+      "'"$jar_path"'",
+      "'"$master_dataset_bucket"'",
       "'"$jsonl_out"'"
     ],
     "Type": "CUSTOM_JAR",
@@ -73,8 +79,8 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.MqReportsEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly.jar",
+      "dpla.batch_process_dpla_index.processes.MqReports",
+      "'"$jar_path"'",
       "'"$parquet_out"'",
       "'"$metadata_quality_out"'"
     ],
@@ -90,8 +96,8 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.SitemapEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly.jar",
+      "dpla.batch_process_dpla_index.processes.Sitemap",
+      "'"$jar_path"'",
       "'"$parquet_out"'",
       "'"$sitemap_out"'",
       "'"$sitemap_root"'"
