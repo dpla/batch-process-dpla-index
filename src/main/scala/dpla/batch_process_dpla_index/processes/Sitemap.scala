@@ -21,7 +21,7 @@ object Sitemap extends S3FileHelper with LocalFileWriter with ManifestWriter {
     val dirTimestamp = dateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
     val parquetPath = PathHelper.parquetPath(inPath)
     val docs = spark.read.parquet(parquetPath)
-    val ids = docs.select("doc.id").alias("id").as[String]
+    val ids = docs.select("id").as[String]
     val idCount = ids.count
     val partitionCount = Math.round(Math.ceil(idCount / maxRows)).toInt
     val subFiles = ids.repartition(partitionCount, ids.col("id"))
