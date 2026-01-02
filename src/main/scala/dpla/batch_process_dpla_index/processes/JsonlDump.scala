@@ -37,7 +37,7 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
     // Export individual provider dumps
     providerRecords.foreach(x => {
-      val outDir = outDirBase + "/" + x.provider + ".jsonl"
+      val outDir = outDirBase + "/" + x.provider.replaceAll("/", "") + ".jsonl"
 
       deleteExisting(outDir)
       export(x.records, outDir)
