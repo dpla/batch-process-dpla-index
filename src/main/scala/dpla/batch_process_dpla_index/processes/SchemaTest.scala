@@ -25,5 +25,6 @@ object SchemaTest {
       val schema = data.schema
       Files.write(Path.of(provider.replaceAll("/", "") + ".schema"), schema.sql.getBytes(StandardCharsets.UTF_8))
     }
+    spark.stop()
   }
 }

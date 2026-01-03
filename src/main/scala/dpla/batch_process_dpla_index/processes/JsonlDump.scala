@@ -9,7 +9,6 @@ import org.apache.spark.storage.StorageLevel
 
 
 object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
-  val inputBucket = "dpla-master-dataset"
 
   private case class ProviderRecords(provider: String, input: String, records: RDD[String], count: Long)
 

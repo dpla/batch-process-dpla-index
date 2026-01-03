@@ -31,6 +31,7 @@ object SchemaRepair {
     val inDf = spark.read.format("avro").load(inDfPath)
     val outDf = fixSchema(inDf)
     outDf.write.format("avro").save(outDfPath)
+    spark.stop()
   }
 
   private def toValueField(colName: String): Column =
@@ -42,7 +43,7 @@ object SchemaRepair {
       col.getField("name").as("name"),
       col.getField("providedLabel").as("providedLabel"),
       col.getField("note").as("note"),
-      struct(col("scheme").as("value")).as("scheme"),
+      struct(col.getField("scheme").as("value")).as("scheme"),
       transform(col.getField("exactMatch"), x => struct(x.as("value"))).as("exactMatch"),
       transform(col.getField("closeMatch"), x => struct(x.as("value"))).as("closeMatch")
     )
