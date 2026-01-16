@@ -1,28 +1,27 @@
 package dpla.batch_process_dpla_index.processes
 
 import dpla.batch_process_dpla_index.helpers.{LocalFileWriter, ManifestWriter, PathHelper, S3FileHelper}
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 
 object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
 
-  def execute(spark: SparkSession, inpath: String, outpath: String): String = {
+  def execute(spark: SparkSession, inPath: String, outPath: String): String = {
 
-    val s3write: Boolean = outpath.startsWith("s3")
-    val outDir: String = outpath.stripSuffix("/") + PathHelper.datePath
+    val s3write = outPath.startsWith("s3")
+    val outDir = outPath.stripSuffix("/") + PathHelper.datePath
     // delete any existing keys with s3 prefix of outDir
     if(s3write) deleteS3Path(outDir)
 
-    val parquetPath = PathHelper.parquetPath(inpath)
-    val docs: DataFrame = spark.read.parquet(parquetPath)
-
-    val items = docs.select("doc.*")
+    val parquetPath = PathHelper.parquetPath(inPath)
+    val items = spark.read.parquet(parquetPath)
 
     items.createOrReplaceTempView("items")
 
     val itemdata = spark.sqlContext.sql("""select id,
                                          provider.name as provider,
-                                         dataProvider.name as dataProviders,
+                                         dataProvider.name as dataProvider,
                                         case
                                           when size(sourceResource.title) == 0
                                           then 0 else 1 end
@@ -40,15 +39,15 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                           then 0 else 1 end
                                           as type,
                                         case
-                                          when size(sourceResource.language.name) == 0
+                                          when size(sourceResource.language.providedLabel) == 0
                                           then 0 else 1 end
                                           as language,
                                         case
-                                          when size(sourceResource.spatial.name) == 0
+                                          when size(sourceResource.place.name) == 0
                                           then 0 else 1 end
                                           as spatial,
                                         case
-                                          when size(sourceResource.subject.name) == 0
+                                          when size(sourceResource.subject.providedLabel) == 0
                                           then 0 else 1 end
                                           as subject,
                                         case
@@ -56,7 +55,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                           then 0 else 1 end
                                           as collection,
                                         case
-                                          when size(sourceResource.date.displayDate) == 0
+                                          when size(sourceResource.date.originalSourceDate) == 0
                                           then 0 else 1 end
                                           as date,
                                         case
@@ -71,7 +70,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
                                           then 1 else 0 end
                                           as openRights,
                                         case
-                                          when size(object) == 0
+                                          when object is null
                                           then 0 else 1 end
                                           as preview,
                                         case
@@ -112,7 +111,6 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
         sum("count").alias("count"))
 
     val contributorScores = itemdata.filter("provider is not null")
-      .withColumn("dataProvider", explode(col("dataProviders")))
       .filter("dataProvider is not null")
       .withColumn("wikimediaReady", expr("case when mediaAccess == 1 and openRights == 1 then 1 else 0 end"))
       .withColumn("count", lit(1))
@@ -150,7 +148,7 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
       .save(outDir + "/contributor.csv")
 
     val opts: Map[String, String] = Map(
-      "Source" -> inpath,
+      "Source" -> inPath,
       "Provider count" -> providerScores.count.toString,
       "Contributor count" -> contributorScores.count.toString
     )
@@ -161,5 +159,14 @@ object MqReports extends LocalFileWriter with S3FileHelper with ManifestWriter {
 
     // return outpath
     outDir
+  }
+
+  def main(args: Array[String]): Unit = {
+    val inPath = args(0)
+    val outPath = args(1)
+    val conf = new SparkConf().setAppName("Batch process DPLA index: MQ Reports")
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    MqReports.execute(spark, inPath, outPath)
+    spark.stop()
   }
 }

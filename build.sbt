@@ -1,20 +1,28 @@
+val SPARK_VERSION = "3.5.5"
+val HADOOP_VERSION = "3.4.1"
+
 name := "batch-process-dpla-index"
-
 version := "0.1"
+scalaVersion := "2.12.18"
+organization := "dpla"
 
-scalaVersion := "2.11.8"
+assembly / assemblyJarName := "batch-process-dpla-index-assembly.jar"
 
-assemblyMergeStrategy in assembly := {
-  case "META-INF/MANIFEST.MF" => MergeStrategy.discard
+assembly / assemblyMergeStrategy := {
+  case PathList("META-INF", xs @ _*) =>
+    xs match {
+      case "MANIFEST.MF" :: Nil => MergeStrategy.discard
+      case "services" :: _      => MergeStrategy.concat
+      case _                    => MergeStrategy.discard
+    }
+  case "application.conf"       => MergeStrategy.concat
   case x => MergeStrategy.first
 }
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "2.3.2" % Provided,
-  "org.apache.spark" %% "spark-sql" % "2.3.2" % Provided,
-  "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-  "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
-  "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "7.3.2",
-  "com.squareup.okhttp3" % "okhttp" % "3.8.0",
-  "com.databricks" %% "spark-avro" % "4.0.0"
+  "org.apache.spark" %% "spark-sql" % SPARK_VERSION,
+  "org.apache.spark" %% "spark-hadoop-cloud" % SPARK_VERSION,
+  "org.apache.spark" %% "spark-avro" % SPARK_VERSION,
+  "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+  "org.scalamock" %% "scalamock" % "5.2.0" % Test,
 )

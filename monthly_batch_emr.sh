@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
 
-this_script_name=$0
+set -euxo pipefail
+
 
 # Hard code values for spark job
+master_dataset_bucket="dpla-master-dataset"
 parquet_out="s3a://dpla-provider-export/"
 jsonl_out="s3a://dpla-provider-export/"
 metadata_quality_out="s3a://dashboard-analytics/"
 sitemap_out="s3a://sitemaps.dp.la/sitemap/"
 sitemap_root="https://dp.la/sitemap/"
-necropolis_out="s3a://dpla-necropolis/"
-do_necro="true"
+jar_name="batch-process-dpla-index-assembly.jar"
+jar_bucket="s3://dpla-monthly-batch/"
+jar_path="${jar_bucket}${jar_name}"
 
 sbt assembly
-echo "Copying to s3://dpla-monthly-batch/"
-aws s3 cp ./target/scala-2.11/batch-process-dpla-index-assembly-0.1.jar s3://dpla-monthly-batch/
+echo "Copying to ${jar_bucket}"
+aws s3 cp ./target/scala-2.12/${jar_name} $jar_bucket
 
 # spin up EMR cluster and run job
 aws emr create-cluster \
 --configurations file://./cluster-config.json \
---auto-terminate \
+--no-auto-terminate \
 --auto-scaling-role EMR_AutoScaling_DefaultRole \
 --applications Name=Hadoop Name=Hive Name=Spark \
 --ebs-root-volume-size 100 \
@@ -32,7 +35,7 @@ aws emr create-cluster \
 }' \
 --service-role EMR_Default_Role_v2 \
 --enable-debugging \
---release-label emr-5.36.0 \
+--release-label emr-7.10.0 \
 --log-uri 's3n://aws-logs-283408157088-us-east-1/elasticmapreduce/' \
 --tags for-use-with-amazon-emr-managed-policies=true \
 --steps '[
@@ -42,12 +45,13 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.ParquetDumpEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "dpla.batch_process_dpla_index.processes.ParquetDump",
+      "'"$jar_path"'",
+      "'"$master_dataset_bucket"'",
       "'"$parquet_out"'"
     ],
     "Type": "CUSTOM_JAR",
-    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "ActionOnFailure": "CANCEL_AND_WAIT",
     "Jar": "command-runner.jar",
     "Properties": "",
     "Name": "parquet"
@@ -58,12 +62,13 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.JsonlDumpEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "dpla.batch_process_dpla_index.processes.JsonlDump",
+      "'"$jar_path"'",
+      "'"$master_dataset_bucket"'",
       "'"$jsonl_out"'"
     ],
     "Type": "CUSTOM_JAR",
-    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "ActionOnFailure": "CANCEL_AND_WAIT",
     "Jar": "command-runner.jar",
     "Properties": "",
     "Name": "jsonl"
@@ -74,13 +79,13 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.MqReportsEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "dpla.batch_process_dpla_index.processes.MqReports",
+      "'"$jar_path"'",
       "'"$parquet_out"'",
       "'"$metadata_quality_out"'"
     ],
     "Type": "CUSTOM_JAR",
-    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "ActionOnFailure": "CANCEL_AND_WAIT",
     "Jar": "command-runner.jar",
     "Properties": "",
     "Name": "mq"
@@ -91,14 +96,14 @@ aws emr create-cluster \
       "--deploy-mode",
       "cluster",
       "--class",
-      "dpla.batch_process_dpla_index.entries.SitemapEntry",
-      "s3://dpla-monthly-batch/batch-process-dpla-index-assembly-0.1.jar",
+      "dpla.batch_process_dpla_index.processes.Sitemap",
+      "'"$jar_path"'",
       "'"$parquet_out"'",
       "'"$sitemap_out"'",
       "'"$sitemap_root"'"
     ],
     "Type": "CUSTOM_JAR",
-    "ActionOnFailure": "TERMINATE_CLUSTER",
+    "ActionOnFailure": "CANCEL_AND_WAIT",
     "Jar": "command-runner.jar",
     "Properties": "",
     "Name": "sitemap"
@@ -107,39 +112,21 @@ aws emr create-cluster \
 --name 'monthlybatch' \
 --instance-groups '[
   {
-    "InstanceCount": 7,
+    "InstanceCount": 8,
     "EbsConfiguration": {
       "EbsBlockDeviceConfigs": [
         {
           "VolumeSpecification": {
             "SizeInGB": 250,
-            "VolumeType": "gp2"
+            "VolumeType": "gp3"
           },
           "VolumesPerInstance": 2
         }
       ]
     },
     "InstanceGroupType": "CORE",
-    "InstanceType": "r6g.xlarge",
+    "InstanceType": "r8g.xlarge",
     "Name": "Core - 2"
-  },
-  {
-    "InstanceCount": 8,
-    "BidPrice": "OnDemandPrice",
-    "EbsConfiguration": {
-      "EbsBlockDeviceConfigs": [
-        {
-          "VolumeSpecification": {
-            "SizeInGB": 250,
-            "VolumeType": "gp2"
-          },
-          "VolumesPerInstance": 2
-        }
-      ]
-    },
-    "InstanceGroupType": "TASK",
-    "InstanceType": "r6g.xlarge",
-    "Name": "Task - 3"
   },
   {
     "InstanceCount": 1,
@@ -148,14 +135,14 @@ aws emr create-cluster \
         {
           "VolumeSpecification": {
             "SizeInGB": 32,
-            "VolumeType": "gp2"
+            "VolumeType": "gp3"
           },
           "VolumesPerInstance": 2
         }
       ]
     },
     "InstanceGroupType": "MASTER",
-    "InstanceType": "m6g.xlarge",
+    "InstanceType": "m8g.xlarge",
     "Name": "Master - 1"
   }
 ]' \
