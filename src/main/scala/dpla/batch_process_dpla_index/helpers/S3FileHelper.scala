@@ -88,6 +88,7 @@ trait S3FileHelper {
     val inStream = new ByteArrayInputStream(compressedBytes)
 
     val objectMetadata = new ObjectMetadata()
+    objectMetadata.setContentType("application/xml")
     objectMetadata.setContentEncoding("gzip")
 
     s3client.putObject(new PutObjectRequest(bucket, key, inStream, objectMetadata))
