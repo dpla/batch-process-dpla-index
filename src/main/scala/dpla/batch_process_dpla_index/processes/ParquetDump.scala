@@ -118,8 +118,10 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
     df2.write.parquet(outPath)
   }
 
-  def execute(spark: SparkSession, inBucket: String, outBucket: String): String = {
-    val paths = getLatestMasterDatasetPathsForType(inBucket, "enrichment").values.toSeq
+  def execute(spark: SparkSession, inBucket: String, outBucket: String, excludedHubs: Set[String] = Set.empty): String = {
+    if (excludedHubs.nonEmpty)
+      println(s"Excluding hubs from parquet dump: ${excludedHubs.toSeq.sorted.mkString(", ")}")
+    val paths = getLatestMasterDatasetPathsForType(inBucket, "enrichment", excludedHubs).values.toSeq
     val outPath = PathHelper.parquetPath(outBucket)
     dump(spark, paths, outPath)
     outPath
@@ -131,7 +133,8 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
     val spark = SparkSession.builder().config(conf).getOrCreate()
     val inBucket = args(0)
     val outBucket = args(1)
-    val result = execute(spark, inBucket, outBucket)
+    val excludedHubs = if (args.length > 2 && args(2).nonEmpty) args(2).split(",").map(_.trim).toSet else Set.empty[String]
+    val result = execute(spark, inBucket, outBucket, excludedHubs)
     println("Parquet saved to " + result)
     spark.stop()
   }
