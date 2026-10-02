@@ -49,6 +49,11 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
       writeManifest(manifestOpts, outDir)
     })
 
+    if (providerRecords.isEmpty) {
+      println("WARNING: no jsonl paths found after exclusions — skipping jsonl dump.")
+      return outDirBase
+    }
+
     // Export all providers dump
     val allRecords = providerRecords.map(x => x.records).reduce(_.union(_))
     val outDir = s"$outDirBase/all.jsonl"

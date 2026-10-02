@@ -122,6 +122,10 @@ object ParquetDump extends LocalFileWriter with S3FileHelper with ManifestWriter
     if (excludedHubs.nonEmpty)
       println(s"Excluding hubs from parquet dump: ${excludedHubs.toSeq.sorted.mkString(", ")}")
     val paths = getLatestMasterDatasetPathsForType(inBucket, "enrichment", excludedHubs).values.toSeq
+    if (paths.isEmpty) {
+      println("WARNING: no enrichment paths found after exclusions — skipping parquet dump.")
+      return PathHelper.parquetPath(outBucket)
+    }
     val outPath = PathHelper.parquetPath(outBucket)
     dump(spark, paths, outPath)
     outPath
