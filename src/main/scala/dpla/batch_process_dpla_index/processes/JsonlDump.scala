@@ -12,9 +12,11 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
 
   private case class ProviderRecords(provider: String, input: String, records: RDD[String], count: Long)
 
-  def execute(spark: SparkSession, inputBucket: String, outputBucket: String): String = {
+  def execute(spark: SparkSession, inputBucket: String, outputBucket: String, excludedHubs: Set[String] = Set.empty): String = {
+    if (excludedHubs.nonEmpty)
+      println(s"Excluding hubs from jsonl dump: ${excludedHubs.toSeq.sorted.mkString(", ")}")
     val outDirBase = outputBucket.stripSuffix("/") + PathHelper.datePath
-    val hubToJsonl = getLatestMasterDatasetPathsForType(inputBucket, "jsonl")
+    val hubToJsonl = getLatestMasterDatasetPathsForType(inputBucket, "jsonl", excludedHubs)
 
     import spark.implicits._
 
@@ -46,6 +48,11 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
         "Data source" -> x.input)
       writeManifest(manifestOpts, outDir)
     })
+
+    if (providerRecords.isEmpty) {
+      println("WARNING: no jsonl paths found after exclusions — skipping jsonl dump.")
+      return outDirBase
+    }
 
     // Export all providers dump
     val allRecords = providerRecords.map(x => x.records).reduce(_.union(_))
@@ -90,9 +97,10 @@ object JsonlDump extends S3FileHelper with LocalFileWriter with ManifestWriter {
   def main(args: Array[String]): Unit = {
     val inputBucket = args(0)
     val outputBucket = args(1)
+    val excludedHubs = if (args.length > 2 && args(2).nonEmpty) args(2).split(",").map(_.trim).toSet else Set.empty[String]
     val conf = new SparkConf().setAppName(jobname)
     val spark = SparkSession.builder().config(conf).getOrCreate()
-    JsonlDump.execute(spark, inputBucket, outputBucket)
+    JsonlDump.execute(spark, inputBucket, outputBucket, excludedHubs)
     spark.stop()
   }
 }

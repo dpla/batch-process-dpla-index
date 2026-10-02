@@ -17,11 +17,17 @@ trait S3FileHelper {
 
   lazy val s3client: AmazonS3 = AmazonS3Client.builder().build()
 
-  def getLatestMasterDatasetPathsForType(inputBucket: String, dataType: String): Map[String, String] = {
+  def getLatestMasterDatasetPathsForType(
+    inputBucket: String,
+    dataType: String,
+    excludedHubs: Set[String] = Set.empty
+  ): Map[String, String] = {
     val listHubFolders = new ListObjectsRequest(inputBucket, "", "", "/", MAX_ROWS)
     val hubsListObjectsResult = s3client.listObjects(listHubFolders)
     val results = for {
       hubFolder <- hubsListObjectsResult.getCommonPrefixes.toSeq
+      hubName = hubFolder.stripSuffix("/")
+      if !excludedHubs.contains(hubName)
       subFoldersRequest = new ListObjectsRequest(inputBucket, hubFolder + dataType + "/", "", "/", MAX_ROWS)
       subFoldersResult = s3client.listObjects(subFoldersRequest)
       dataTypeFolder <- subFoldersResult.getCommonPrefixes.toSeq.sorted.lastOption

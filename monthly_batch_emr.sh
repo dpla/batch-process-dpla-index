@@ -14,6 +14,41 @@ jar_name="batch-process-dpla-index-assembly.jar"
 jar_bucket="s3://dpla-monthly-batch/"
 jar_path="${jar_bucket}${jar_name}"
 
+# ---------- conf pre-flight: read excluded hubs from origin/master:i3.conf ----------
+# Resolve the ingestion3-conf repo — default matches launch_indexer.py convention.
+conf_repo="${INGESTION3_CONF_REPO:-${HOME}/Documents/Repos/ingestion3-conf}"
+
+if [[ ! -d "$conf_repo" ]]; then
+  echo "ERROR: ingestion3-conf repo not found at $conf_repo. Set INGESTION3_CONF_REPO or clone the repo." >&2
+  exit 1
+fi
+
+echo "Fetching ingestion3-conf origin..."
+GIT_TERMINAL_PROMPT=0 git -C "$conf_repo" fetch origin || {
+  echo "ERROR: git fetch origin failed in $conf_repo — cannot verify hub exclusions." >&2
+  exit 1
+}
+
+conf_sha=$(GIT_TERMINAL_PROMPT=0 git -C "$conf_repo" rev-parse --short origin/master) || {
+  echo "ERROR: could not resolve origin/master SHA in $conf_repo." >&2
+  exit 1
+}
+
+i3conf=$(GIT_TERMINAL_PROMPT=0 git -C "$conf_repo" show origin/master:i3.conf) || {
+  echo "ERROR: could not read origin/master:i3.conf from $conf_repo." >&2
+  exit 1
+}
+
+# Parse hubs with included_in_index = false; apply same conf→S3 name mapping as launch_indexer.py.
+excluded_hubs=$(echo "$i3conf" \
+  | grep -E '^[a-z0-9_-]+\.included_in_index\s*=\s*false' \
+  | sed -E 's/\.included_in_index.*//' \
+  | sed 's/^hathi$/hathitrust/; s/^tn$/tennessee/' \
+  | sort | paste -sd ',' -)
+
+echo "Conf SHA (origin/master): $conf_sha"
+echo "Excluded hubs: ${excluded_hubs:-none}"
+
 sbt assembly
 echo "Copying to ${jar_bucket}"
 aws s3 cp ./target/scala-2.12/${jar_name} $jar_bucket
@@ -37,7 +72,7 @@ aws emr create-cluster \
 --enable-debugging \
 --release-label emr-7.10.0 \
 --log-uri 's3n://aws-logs-283408157088-us-east-1/elasticmapreduce/' \
---tags for-use-with-amazon-emr-managed-policies=true \
+--tags "for-use-with-amazon-emr-managed-policies=true" "i3conf-sha=${conf_sha}" "batch-excluded=${excluded_hubs:-none}" \
 --steps '[
   {
     "Args": [
@@ -48,7 +83,8 @@ aws emr create-cluster \
       "dpla.batch_process_dpla_index.processes.ParquetDump",
       "'"$jar_path"'",
       "'"$master_dataset_bucket"'",
-      "'"$parquet_out"'"
+      "'"$parquet_out"'",
+      "'"$excluded_hubs"'"
     ],
     "Type": "CUSTOM_JAR",
     "ActionOnFailure": "CANCEL_AND_WAIT",
@@ -65,7 +101,8 @@ aws emr create-cluster \
       "dpla.batch_process_dpla_index.processes.JsonlDump",
       "'"$jar_path"'",
       "'"$master_dataset_bucket"'",
-      "'"$jsonl_out"'"
+      "'"$jsonl_out"'",
+      "'"$excluded_hubs"'"
     ],
     "Type": "CUSTOM_JAR",
     "ActionOnFailure": "CANCEL_AND_WAIT",
